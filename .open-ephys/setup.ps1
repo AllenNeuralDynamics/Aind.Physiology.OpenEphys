@@ -1,9 +1,12 @@
 Push-Location $PSScriptRoot
-$Version = "0.1.1"
+$version = "1.0.1"
 if (!(Test-Path "./open-ephys.exe")) {
-    $release = "https://github.com/open-ephys/plugin-GUI/releases/download/v$Version/open-ephys-v$Version-windows.zip"
+    $release = "https://github.com/open-ephys/plugin-GUI/releases/download/v${version}/open-ephys-v${version}-windows.zip"
+    Write-Host "Downloading Open Ephys GUI v${version} from $release"
     Invoke-WebRequest $release -OutFile "temp.zip"
-    Expand-Archive "temp.zip" -DestinationPath "." -Force
+    Expand-Archive "temp.zip" -DestinationPath "temp" -Force
+    Get-ChildItem "temp/open-ephys/*" | Move-Item -Destination "." -Force
+    Remove-Item -Path "temp" -Recurse -Force
     Remove-Item -Path "temp.zip"
 }
 & .\open-ephys.exe
