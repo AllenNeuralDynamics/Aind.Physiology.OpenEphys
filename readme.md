@@ -15,9 +15,10 @@ the CLABE session-mapper interface used by VrForaging. It retrieves recording
 history from an **Ephys Metadata Generator** processor via CLABE's Open Ephys
 HTTP client and validates each entry as an AIND `DataStream`.
 
-Use Python 3.11 or newer and the sibling CLABE checkout containing
-`OpenEphysGuiClient.get_processor_metadata`. From this repository's root, in
-your chosen environment:
+Use Python 3.11 or newer and the sibling CLABE checkout supporting
+`app.client.get_processor_metadata`. The acquisition mapper accepts the public
+`OpenEphysApp`, not its private HTTP client class. From this repository's root,
+in your chosen environment:
 
 ```powershell
 python -m pip install -e ../clabe "aind-data-schema>=2,<3"
@@ -38,15 +39,23 @@ from pathlib import Path
 from aind_behavior_services.session import Session
 from aind_data_schema.components.coordinates import CoordinateSystemLibrary
 from aind_data_schema.core.acquisition import AcquisitionSubjectDetails
-from clabe.apps.open_ephys import OpenEphysGuiClient
+from clabe.apps.open_ephys import OpenEphysApp, OpenEphysAppSettings
 
 from src.data_mappers import AindAcquisitionDataMapper
 
 session = Session.model_validate_json(Path("session.json").read_text(encoding="utf-8"))
-client = OpenEphysGuiClient(host="localhost", port=37497)
-# If an OpenEphysApp is already configured, use app.client instead.
+app = OpenEphysApp(
+    OpenEphysAppSettings(
+        signal_chain=Path("src/example.xml"),
+        executable=Path(".open-ephys/open-ephys.exe"),
+        address="localhost",
+        port=37497,
+    )
+)
+# Prefer reusing the OpenEphysApp already configured by your experiment.
+# Constructing this object does not launch the GUI; mapping requires it running.
 mapper = AindAcquisitionDataMapper(
-    client=client,
+    app=app,
     processor_id=101,  # Replace with the metadata generator ID in your signal chain.
     session=session,
     instrument_id="EPHYS1",  # Replace with the actual instrument.
@@ -86,9 +95,10 @@ same CLABE `map()`/`run()`, `mapped`, `is_mapped()`, and `rig_schema()` contract
 as the VrForaging instrument mapper.
 
 Supply exactly one configuration source: `xml_path` for offline mapping or
-`client=app.client` (or `OpenEphysGuiClient()`) to fetch the running GUI's
-configuration through `GET /api/config`. Construction performs no HTTP requests.
-Mapping does not change recording state or write output files.
+`app=app` with a configured `OpenEphysApp` to fetch the running GUI's
+configuration through `app.client` using `GET /api/config`. Neither mapper
+requires importing the private HTTP client class. Construction performs no HTTP
+requests. Mapping does not launch the GUI, change recording state, or write files.
 
 The XML provides computer name/OS and Neuropixels probes, slots, ports, part
 numbers, and firmware. The mapper deduplicates repeated physical probe serials,
@@ -118,7 +128,7 @@ manipulators = {
     ).items()
 }
 mapper = AindInstrumentDataMapper(
-    xml_path=Path("src/example.xml"),  # Or replace with client=app.client.
+    xml_path=Path("src/example.xml"),  # Or replace with app=app.
     instrument_id="EPHYS1",  # Supply the actual instrument identifier.
     modification_date=date(2026, 10, 23),  # Actual hardware modification date.
     coordinate_system=CoordinateSystemLibrary.BREGMA_ARI,  # Only if applicable.

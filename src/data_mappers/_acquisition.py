@@ -5,9 +5,10 @@ import logging
 from aind_behavior_services.session import Session
 from aind_data_schema.components.coordinates import CoordinateSystem
 from aind_data_schema.core import acquisition
-from clabe.apps.open_ephys import OpenEphysGuiClient, Status
-from clabe.data_mapper import aind_data_schema as ads
 from pydantic import AwareDatetime, TypeAdapter
+
+from clabe.apps.open_ephys import OpenEphysApp, Status
+from clabe.data_mapper import aind_data_schema as ads
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +23,7 @@ class AindAcquisitionDataMapper(ads.AindDataSchemaSessionDataMapper):
     with ``write_standard_file`` when ready.
 
     Args:
-        client: CLABE HTTP client, e.g. an existing ``OpenEphysApp.client``.
+        app: Configured CLABE Open Ephys application; HTTP access uses ``app.client``.
         processor_id: Explicit ID of the Ephys Metadata Generator processor.
         session: Shared experimental session (subject, experimenters, and name).
         instrument_id: Identifier of the recording instrument.
@@ -35,7 +36,7 @@ class AindAcquisitionDataMapper(ads.AindDataSchemaSessionDataMapper):
 
     def __init__(
         self,
-        client: OpenEphysGuiClient,
+        app: OpenEphysApp,
         processor_id: int,
         session: Session,
         *,
@@ -46,7 +47,7 @@ class AindAcquisitionDataMapper(ads.AindDataSchemaSessionDataMapper):
         coordinate_system: CoordinateSystem | None = None,
         stimulus_epochs: list[acquisition.StimulusEpoch] | None = None,
     ) -> None:
-        self.client = client
+        self.app = app
         self.processor_id = processor_id
         self.session_model = session
         self.instrument_id = instrument_id
@@ -94,9 +95,9 @@ class AindAcquisitionDataMapper(ads.AindDataSchemaSessionDataMapper):
         )
 
     def _get_data_streams(self) -> list[acquisition.DataStream]:
-        if self.client.get_status() != Status.IDLE:
+        if self.app.client.get_status() != Status.IDLE:
             raise ValueError("Open Ephys must be idle before mapping completed recording metadata.")
-        metadata = self.client.get_processor_metadata(self.processor_id)
+        metadata = self.app.client.get_processor_metadata(self.processor_id)
         if not metadata:
             raise ValueError("The metadata processor has no recording history to map.")
         # Validate the wire timestamps before the schema can infer a timezone.
