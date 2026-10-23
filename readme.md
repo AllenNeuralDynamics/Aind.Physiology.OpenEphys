@@ -13,7 +13,8 @@ A repository with a deployable version of the Open Ephys GUI.
 `src/data_mappers/_acquisition.py` provides `AindAcquisitionDataMapper`, following
 the CLABE session-mapper interface used by VrForaging. It retrieves recording
 history from an **Ephys Metadata Generator** processor via CLABE's Open Ephys
-HTTP client and validates each entry as an AIND `DataStream`.
+HTTP client or from a directory of saved JSON files, validating each entry as
+an AIND `DataStream`.
 
 Use Python 3.11 or newer and the sibling CLABE checkout supporting
 `app.client.get_processor_metadata`. The acquisition mapper accepts the public
@@ -68,6 +69,36 @@ acquisition = mapper.map()
 acquisition.write_standard_file(prefix="ephys")
 ```
 
+### Offline acquisition metadata
+
+Instead of `app` and `processor_id`, pass `metadata_dir` pointing directly to
+the processor's metadata directory. No running GUI or application object is
+needed. Session and experiment metadata must still be supplied by the caller:
+
+```python
+mapper = AindAcquisitionDataMapper(
+    metadata_dir=Path(
+        r"C:\Users\joshs\Documents\Open Ephys\2026-10-23_14-43-15"
+        r"\Ephys Metadata Generator 101"
+    ),
+    session=session,  # The experimental Session loaded above.
+    instrument_id="EPHYS1",  # Supply the actual instrument identifier.
+    acquisition_type="Receptive field mapping",
+    subject_details=AcquisitionSubjectDetails(mouse_platform_name="Running Wheel"),
+)
+acquisition = mapper.map()
+```
+
+Supply exactly one source: `app` with `processor_id`, or `metadata_dir`.
+Directory mode reads all top-level `.json` files (case-insensitive extension)
+in filename order, with one DataStream JSON object per file. Subdirectories
+and non-JSON files are ignored. Use a directory containing only metadata for
+the intended session; files are not deduplicated or silently skipped on errors.
+Missing/empty directories, malformed JSON, and invalid streams are rejected.
+Each mapping rereads the files; it never modifies them or contacts the GUI.
+
+### Acquisition validation and lifecycle
+
 The mapper supports `map()` (or CLABE's inherited `run()`), `is_mapped()`,
 `mapped`, `session_schema()`, and `session_name`. Before successful mapping,
 `is_mapped()` returns false and accessing `mapped`/`session_schema()` raises
@@ -81,7 +112,7 @@ stream bounds, and invalid schema fields are rejected. HTTP errors propagate.
 Optional `stimulus_epochs` can be supplied by the experiment; no behavior-specific
 stimulus metadata is fabricated.
 
-**Lifecycle:** the caller must clear the metadata processor's history before
+**Live-source lifecycle:** the caller must clear the metadata processor's history before
 starting a new session, coordinate recording, stop acquisition, and then map
 before closing the GUI. The mapper never clears history, starts/stops acquisition,
 or writes files. It cannot detect whether the processor history includes an

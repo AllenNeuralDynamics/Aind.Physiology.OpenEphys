@@ -1,14 +1,16 @@
 """Map completed Open Ephys recording history to AIND acquisition metadata."""
 
+import json
 import logging
+from pathlib import Path
+from typing import Any
 
 from aind_behavior_services.session import Session
 from aind_data_schema.components.coordinates import CoordinateSystem
 from aind_data_schema.core import acquisition
-from pydantic import AwareDatetime, TypeAdapter
-
 from clabe.apps.open_ephys import OpenEphysApp, Status
 from clabe.data_mapper import aind_data_schema as ads
+from pydantic import AwareDatetime, TypeAdapter
 
 logger = logging.getLogger(__name__)
 
@@ -16,16 +18,20 @@ logger = logging.getLogger(__name__)
 class AindAcquisitionDataMapper(ads.AindDataSchemaSessionDataMapper):
     """Read an Ephys Metadata Generator's history using the CLABE mapper API.
 
-    Call after recording has stopped, while the GUI is still open and idle.
+    Supply exactly one of ``app`` or ``metadata_dir``. For live mapping, call
+    after recording has stopped, while the GUI is still open and idle.
+    Offline mapping reads one DataStream object per top-level JSON file, in
+    filename order, without contacting the GUI.
     The caller owns recording control and history clearing. Construction does
     not contact the GUI; ``map`` fetches history but never starts/stops recording,
     clears history, or writes files. Write the returned Acquisition explicitly
     with ``write_standard_file`` when ready.
 
     Args:
-        app: Configured CLABE Open Ephys application; HTTP access uses ``app.client``.
-        processor_id: Explicit ID of the Ephys Metadata Generator processor.
+        app: Configured CLABE Open Ephys application, for live mapping only.
+        processor_id: Required with app; ID of the Ephys Metadata Generator.
         session: Shared experimental session (subject, experimenters, and name).
+        metadata_dir: Directory containing saved DataStream JSON files, instead of app.
         instrument_id: Identifier of the recording instrument.
         acquisition_type: Description of the experiment/acquisition.
         subject_details: Subject setup, such as the mouse platform.
@@ -36,10 +42,11 @@ class AindAcquisitionDataMapper(ads.AindDataSchemaSessionDataMapper):
 
     def __init__(
         self,
-        app: OpenEphysApp,
-        processor_id: int,
-        session: Session,
+        app: OpenEphysApp | None = None,
+        processor_id: int | None = None,
+        session: Session | None = None,
         *,
+        metadata_dir: str | Path | None = None,
         instrument_id: str,
         acquisition_type: str,
         subject_details: acquisition.AcquisitionSubjectDetails,
@@ -47,8 +54,17 @@ class AindAcquisitionDataMapper(ads.AindDataSchemaSessionDataMapper):
         coordinate_system: CoordinateSystem | None = None,
         stimulus_epochs: list[acquisition.StimulusEpoch] | None = None,
     ) -> None:
+        if (app is None) == (metadata_dir is None):
+            raise ValueError("Supply exactly one of app or metadata_dir.")
+        if app is not None and processor_id is None:
+            raise ValueError("Supply processor_id when using app.")
+        if metadata_dir is not None and processor_id is not None:
+            raise ValueError("processor_id is only used with app, not metadata_dir.")
+        if session is None:
+            raise ValueError("Supply the experimental session.")
         self.app = app
         self.processor_id = processor_id
+        self.metadata_dir = Path(metadata_dir) if metadata_dir is not None else None
         self.session_model = session
         self.instrument_id = instrument_id
         self.acquisition_type = acquisition_type
@@ -95,9 +111,13 @@ class AindAcquisitionDataMapper(ads.AindDataSchemaSessionDataMapper):
         )
 
     def _get_data_streams(self) -> list[acquisition.DataStream]:
-        if self.app.client.get_status() != Status.IDLE:
-            raise ValueError("Open Ephys must be idle before mapping completed recording metadata.")
-        metadata = self.app.client.get_processor_metadata(self.processor_id)
+        if self.app is not None:
+            if self.app.client.get_status() != Status.IDLE:
+                raise ValueError("Open Ephys must be idle before mapping completed recording metadata.")
+            assert self.processor_id is not None
+            metadata = self.app.client.get_processor_metadata(self.processor_id)
+        else:
+            metadata = self._read_metadata_directory()
         if not metadata:
             raise ValueError("The metadata processor has no recording history to map.")
         # Validate the wire timestamps before the schema can infer a timezone.
@@ -110,3 +130,26 @@ class AindAcquisitionDataMapper(ads.AindDataSchemaSessionDataMapper):
             if stream.stream_end_time < stream.stream_start_time:
                 raise ValueError(f"Metadata stream {index} ends before it starts; recording may be incomplete.")
         return streams
+
+    def _read_metadata_directory(self) -> list[dict[str, Any]]:
+        assert self.metadata_dir is not None
+        if not self.metadata_dir.exists():
+            raise FileNotFoundError(f"Metadata directory not found: {self.metadata_dir}")
+        if not self.metadata_dir.is_dir():
+            raise NotADirectoryError(f"Metadata path is not a directory: {self.metadata_dir}")
+        paths = sorted(
+            path for path in self.metadata_dir.iterdir() if path.is_file() and path.suffix.lower() == ".json"
+        )
+        if not paths:
+            raise ValueError(f"No JSON metadata files found in {self.metadata_dir}.")
+        metadata = []
+        for path in paths:
+            try:
+                item = json.loads(path.read_text(encoding="utf-8-sig"))
+            except (json.JSONDecodeError, UnicodeError) as exc:
+                raise ValueError(f"Invalid metadata JSON in {path}: {exc}") from exc
+            if not isinstance(item, dict):
+                # The file's contents are invalid, not the caller's argument type.
+                raise ValueError(f"Metadata file must contain a single DataStream object: {path}")  # noqa: TRY004
+            metadata.append(item)
+        return metadata
