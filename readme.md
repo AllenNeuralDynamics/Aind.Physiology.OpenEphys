@@ -137,40 +137,45 @@ so the four quad-base entries in `src/example.xml` become one probe/assembly.
 Disabled probes remain in the Instrument because it describes configured
 hardware, not only the devices recorded in a particular acquisition.
 
-The XML does **not** provide manipulator identities. Supply actual `Manipulator`
-objects keyed by physical probe serial number, plus the instrument ID,
-modification date, and coordinate system. Do not copy the example's identities
-into real rig metadata.
+Pass an `aind_data_schema.core.acquisition.Acquisition` object as `acquisition`
+(for example, the result of the acquisition mapper above). The instrument mapper
+uses each stream's `EphysAssemblyConfig` to associate `probes[].device_name`
+with `manipulator.device_name`, preserving the assembly's `device_name`.
+Probe names must match XML `custom_probe_name` (or the probe serial number when
+the XML name is empty). Every configured XML probe needs an association, even
+if disabled for acquisition. Repeated associations across recordings are
+deduplicated; conflicting associations and blank device names are rejected.
+
+Acquisition configurations do not supply manipulator manufacturer, model, or
+serial number. Generated manipulators use the recorded device name, manufacturer
+`Unknown`, and unset model/serial rather than fabricated hardware details.
+Instrument ID, modification date, and coordinate system remain explicit inputs.
 
 ```python
 from datetime import date
 from pathlib import Path
 
 from aind_data_schema.components.coordinates import CoordinateSystemLibrary
-from aind_data_schema.components.devices import Manipulator
+from aind_data_schema.core.acquisition import Acquisition
 from src.data_mappers import AindInstrumentDataMapper
 
-# A rig-specific JSON object keyed by physical probe serial number.
-import json
-manipulators = {
-    serial: Manipulator.model_validate(settings)
-    for serial, settings in json.loads(
-        Path("manipulators.json").read_text(encoding="utf-8")
-    ).items()
-}
+# Or reuse the Acquisition returned by AindAcquisitionDataMapper.map().
+acquisition = Acquisition.model_validate_json(
+    Path("acquisition.json").read_text(encoding="utf-8")
+)
 mapper = AindInstrumentDataMapper(
     xml_path=Path("src/example.xml"),  # Or replace with app=app.
     instrument_id="EPHYS1",  # Supply the actual instrument identifier.
     modification_date=date(2026, 10, 23),  # Actual hardware modification date.
     coordinate_system=CoordinateSystemLibrary.BREGMA_ARI,  # Only if applicable.
-    manipulators=manipulators,
+    acquisition=acquisition,
     location="323",  # Optional; supply the actual location.
 )
 instrument = mapper.map()
 instrument.write_standard_file(prefix="ephys")
 ```
 
-One ephys assembly contains each probe and its supplied manipulator. Basestation
+Ephys assemblies group probes with their acquisition-associated manipulator. Basestation
 ports refer to probe names, and basestations connect to the computer described
 in the XML, not the machine running the mapper. Carrier serial values of `0` or
 `UNKNOWN` are left unset; raw carrier/connect-board identifiers are preserved in

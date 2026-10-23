@@ -1,12 +1,12 @@
 """Map Open Ephys Neuropixels configuration to AIND Instrument metadata."""
 
 import logging
-from collections.abc import Mapping
 from datetime import date
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
 from aind_data_schema.base import GenericModel
+from aind_data_schema.components.configs import EphysAssemblyConfig
 from aind_data_schema.components.connections import Connection
 from aind_data_schema.components.coordinates import CoordinateSystem
 from aind_data_schema.components.devices import (
@@ -17,10 +17,11 @@ from aind_data_schema.components.devices import (
     NeuropixelsBasestation,
     ProbePort,
 )
+from aind_data_schema.core.acquisition import Acquisition
 from aind_data_schema.core.instrument import Instrument
 from aind_data_schema_models.devices import ProbeModel
 from aind_data_schema_models.modalities import Modality
-
+from aind_data_schema_models.organizations import Organization
 from clabe.apps.open_ephys import OpenEphysApp
 from clabe.data_mapper import aind_data_schema as ads
 
@@ -59,8 +60,10 @@ class AindInstrumentDataMapper(ads.AindDataSchemaRigDataMapper):
     """Build ephys hardware metadata from a saved or running GUI configuration.
 
     Supply exactly one of ``app`` or ``xml_path``. Live configuration is read
-    through the configured ``OpenEphysApp.client``. Manipulators must be
-    supplied by probe serial number: the GUI XML does not describe them.
+    through the configured ``OpenEphysApp.client``. Probe-to-manipulator
+    associations come from the supplied Acquisition's EphysAssemblyConfig
+    objects, matched to XML probe names. Manufacturer is explicitly unknown;
+    acquisition configurations do not describe manipulator hardware details.
     Instrument identity, modification date, and coordinate system are explicit
     caller inputs, not inferred from the computer or XML save date.
 
@@ -75,7 +78,7 @@ class AindInstrumentDataMapper(ads.AindDataSchemaRigDataMapper):
         instrument_id: str,
         modification_date: date,
         coordinate_system: CoordinateSystem,
-        manipulators: Mapping[str, Manipulator],
+        acquisition: Acquisition,
         app: OpenEphysApp | None = None,
         xml_path: str | Path | None = None,
         location: str | None = None,
@@ -88,7 +91,7 @@ class AindInstrumentDataMapper(ads.AindDataSchemaRigDataMapper):
         self.instrument_id = instrument_id
         self.modification_date = modification_date
         self.coordinate_system = coordinate_system
-        self.manipulators = dict(manipulators)
+        self.acquisition = acquisition
         self.location = location
         self._session_name = session_name
         self._mapped: Instrument | None = None
@@ -133,7 +136,8 @@ class AindInstrumentDataMapper(ads.AindDataSchemaRigDataMapper):
         basestations: dict[int, dict[str, str]] = {}
         occupied: dict[tuple[int, int, int], str] = {}
         ports: dict[int, dict[int, list[str]]] = {}
-        assemblies = []
+        associations = self._probe_associations()
+        assemblies: dict[str, EphysAssembly] = {}
         names = {computer.name}
         for entry in entries:
             serial = _required(entry, "probe_serial_number")
@@ -163,20 +167,19 @@ class AindInstrumentDataMapper(ads.AindDataSchemaRigDataMapper):
             model_name = _required(entry, "probe_name")
             if model_name not in _PROBE_MODELS:
                 raise ValueError(f"Unsupported probe model '{model_name}' for probe {serial}.")
-            if serial not in self.manipulators:
-                raise ValueError(f"Supply a manipulator for probe serial {serial}.")
-            assembly_name = f"Ephys_assembly{probe_name}"
-            for name in (probe_name, assembly_name):
-                if name in names:
-                    raise ValueError(f"Duplicate hardware name '{name}'.")
-                names.add(name)
+            if probe_name in names:
+                raise ValueError(f"Duplicate hardware name '{probe_name}'.")
+            names.add(probe_name)
+            if probe_name not in associations:
+                raise ValueError(f"No acquisition manipulator association for probe '{probe_name}' (serial {serial}).")
+            assembly_name, manipulator_name = associations[probe_name]
             probe = EphysProbe(
                 name=probe_name,
                 serial_number=serial,
                 model=_required(entry, "probe_part_number"),
                 probe_model=_PROBE_MODELS[model_name],
             )
-            assemblies.append(EphysAssembly(name=assembly_name, manipulator=self.manipulators[serial], probes=[probe]))
+            self._add_probe(assemblies, names, assembly_name, manipulator_name, probe)
             ports.setdefault(slot, {}).setdefault(port, []).append(probe_name)
         stations = [
             NeuropixelsBasestation(
@@ -199,6 +202,50 @@ class AindInstrumentDataMapper(ads.AindDataSchemaRigDataMapper):
             modification_date=self.modification_date,
             global_coordinate_system=self.coordinate_system,
             modalities=[Modality.ECEPHYS],
-            components=[*assemblies, *stations, computer],
+            components=[*assemblies.values(), *stations, computer],
             connections=[Connection(source_device=station.name, target_device=computer.name) for station in stations],
         )
+
+    @staticmethod
+    def _add_probe(
+        assemblies: dict[str, EphysAssembly],
+        names: set[str],
+        assembly_name: str,
+        manipulator_name: str,
+        probe: EphysProbe,
+    ) -> None:
+        if assembly_name in assemblies:
+            assemblies[assembly_name].probes.append(probe)
+            return
+        if assembly_name in names:
+            raise ValueError(f"Duplicate hardware name '{assembly_name}'.")
+        names.add(assembly_name)
+        assemblies[assembly_name] = EphysAssembly(
+            name=assembly_name,
+            manipulator=Manipulator(name=manipulator_name, manufacturer=Organization.UNKNOWN),
+            probes=[probe],
+        )
+
+    def _probe_associations(self) -> dict[str, tuple[str, str]]:
+        associations: dict[str, tuple[str, str]] = {}
+        manipulators: dict[str, str] = {}
+        for stream in self.acquisition.data_streams:
+            for config in stream.configurations:
+                if not isinstance(config, EphysAssemblyConfig):
+                    continue
+                assembly_name = config.device_name.strip()
+                manipulator_name = config.manipulator.device_name.strip()
+                if not assembly_name or not manipulator_name:
+                    raise ValueError("Acquisition ephys assembly and manipulator device names must not be blank.")
+                if assembly_name in manipulators and manipulators[assembly_name] != manipulator_name:
+                    raise ValueError(f"Conflicting acquisition manipulators for assembly '{assembly_name}'.")
+                manipulators[assembly_name] = manipulator_name
+                for probe in config.probes:
+                    probe_name = probe.device_name.strip()
+                    if not probe_name:
+                        raise ValueError(f"Acquisition probe device name must not be blank in '{assembly_name}'.")
+                    association = (assembly_name, manipulator_name)
+                    if probe_name in associations and associations[probe_name] != association:
+                        raise ValueError(f"Conflicting acquisition association for probe '{probe_name}'.")
+                    associations[probe_name] = association
+        return associations
