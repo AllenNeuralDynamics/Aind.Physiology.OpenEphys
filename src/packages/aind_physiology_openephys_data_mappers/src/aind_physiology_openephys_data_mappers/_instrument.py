@@ -33,13 +33,13 @@ _PROBE_MODELS = {
     "Neuropixels 2.0 - Single Shank": ProbeModel.NP2_SINGLE_SHANK,
     "Neuropixels 2.0 - Multishank": ProbeModel.NP2_MULTI_SHANK,
     "Neuropixels 2.0 Quad Base": ProbeModel.NP2_QUAD_BASE,
-    "Neuropixels Ultra" : ProbeModel.NP_UHD_FIXED,
+    "Neuropixels Ultra": ProbeModel.NP_UHD_FIXED,
     "Neuropixels Ultra (Phase 1)": ProbeModel.NP_UHD_FIXED,
     "Neuropixels Ultra (Phase 3, Type 1)": ProbeModel.NP_UHD_FIXED,
     "Neuropixels Ultra (Phase 3, Type 2)": ProbeModel.NP_UHD_FIXED,
     "Neuropixels Ultra (Phase 3, Type 3)": ProbeModel.NP_UHD_FIXED,
     "Neuropixels Ultra (Switchable)": ProbeModel.NP_UHD_SWITCHABLE,
-    "Neuropixels Opto": ProbeModel.NP_OPTO_DEMONSTRATOR
+    "Neuropixels Opto": ProbeModel.NP_OPTO_DEMONSTRATOR,
 }
 
 

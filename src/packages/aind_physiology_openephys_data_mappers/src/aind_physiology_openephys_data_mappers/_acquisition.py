@@ -108,9 +108,7 @@ class AindAcquisitionDataMapper(ads.AindDataSchemaSessionDataMapper):
 
     def _read_metadata_directory(self) -> list[dict[str, Any]]:
         metadata_dir = find_metadata_directory(self.data_dir)
-        paths = sorted(
-            path for path in metadata_dir.iterdir() if path.is_file() and path.suffix.lower() == ".json"
-        )
+        paths = sorted(path for path in metadata_dir.iterdir() if path.is_file() and path.suffix.lower() == ".json")
         if not paths:
             raise ValueError(f"No JSON metadata files found in {metadata_dir}.")
         metadata = []

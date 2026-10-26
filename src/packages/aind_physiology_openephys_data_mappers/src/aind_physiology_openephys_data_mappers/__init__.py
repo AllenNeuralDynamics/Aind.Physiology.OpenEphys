@@ -12,6 +12,7 @@ __all__ = ["AindAcquisitionDataMapper", "AindInstrumentDataMapper"]
 
 logger = logging.getLogger(__name__)
 
+
 class DataMapperCli(BaseSettings, cli_kebab_case=True):
     data_path: os.PathLike = Field(description="Path to the session data directory.")
 
