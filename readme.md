@@ -11,15 +11,13 @@ A repository with a deployable version of the Open Ephys GUI.
 ## Acquisition metadata
 
 `src/data_mappers/_acquisition.py` provides `AindAcquisitionDataMapper`, following
-the CLABE session-mapper interface used by VrForaging. It retrieves recording
-history from an **Ephys Metadata Generator** processor via CLABE's Open Ephys
-HTTP client or from a directory of saved JSON files, validating each entry as
-an AIND `DataStream`.
+the CLABE session-mapper interface used by VrForaging. Both mappers read only
+previously saved datasets; they never contact a running Open Ephys application.
+Pass the dataset root as `data_dir`, not an individual processor directory or
+XML path. Other experimental/session metadata remains caller-supplied.
 
-Use Python 3.11 or newer and the sibling CLABE checkout supporting
-`app.client.get_processor_metadata`. The acquisition mapper accepts the public
-`OpenEphysApp`, not its private HTTP client class. From this repository's root,
-in your chosen environment:
+Use Python 3.11 or newer, CLABE's mapper base classes, and AIND schema v2.
+From this repository's root, in your chosen environment:
 
 ```powershell
 python -m pip install -e ../clabe "aind-data-schema>=2,<3"
@@ -31,8 +29,9 @@ reports validation errors rather than silently migrating incompatible schemas.
 This repository is not yet a packaged Python distribution, so the example below
 uses a repository-relative import when run from its root.
 
-After recording has stopped, leave the GUI open and idle. Supply your actual
-session file, metadata processor ID, instrument ID, and experiment details:
+After recording is complete and all metadata files have been saved, supply
+the dataset root, actual session file, instrument ID, and experiment details.
+The GUI can be closed:
 
 ```python
 from pathlib import Path
@@ -40,24 +39,13 @@ from pathlib import Path
 from aind_behavior_services.session import Session
 from aind_data_schema.components.coordinates import CoordinateSystemLibrary
 from aind_data_schema.core.acquisition import AcquisitionSubjectDetails
-from clabe.apps.open_ephys import OpenEphysApp, OpenEphysAppSettings
 
 from src.data_mappers import AindAcquisitionDataMapper
 
 session = Session.model_validate_json(Path("session.json").read_text(encoding="utf-8"))
-app = OpenEphysApp(
-    OpenEphysAppSettings(
-        signal_chain=Path("src/example.xml"),
-        executable=Path(".open-ephys/open-ephys.exe"),
-        address="localhost",
-        port=37497,
-    )
-)
-# Prefer reusing the OpenEphysApp already configured by your experiment.
-# Constructing this object does not launch the GUI; mapping requires it running.
+data_dir = Path(r"C:\Users\joshs\Documents\Open Ephys\2026-10-23_14-43-15")
 mapper = AindAcquisitionDataMapper(
-    app=app,
-    processor_id=101,  # Replace with the metadata generator ID in your signal chain.
+    data_dir=data_dir,
     session=session,
     instrument_id="EPHYS1",  # Replace with the actual instrument.
     acquisition_type="Receptive field mapping",
@@ -69,55 +57,35 @@ acquisition = mapper.map()
 acquisition.write_standard_file(prefix="ephys")
 ```
 
-### Offline acquisition metadata
-
-Instead of `app` and `processor_id`, pass `metadata_dir` pointing directly to
-the processor's metadata directory. No running GUI or application object is
-needed. Session and experiment metadata must still be supplied by the caller:
-
-```python
-mapper = AindAcquisitionDataMapper(
-    metadata_dir=Path(
-        r"C:\Users\joshs\Documents\Open Ephys\2026-10-23_14-43-15"
-        r"\Ephys Metadata Generator 101"
-    ),
-    session=session,  # The experimental Session loaded above.
-    instrument_id="EPHYS1",  # Supply the actual instrument identifier.
-    acquisition_type="Receptive field mapping",
-    subject_details=AcquisitionSubjectDetails(mouse_platform_name="Running Wheel"),
-)
-acquisition = mapper.map()
-```
-
-Supply exactly one source: `app` with `processor_id`, or `metadata_dir`.
-Directory mode reads all top-level `.json` files (case-insensitive extension)
-in filename order, with one DataStream JSON object per file. Subdirectories
-and non-JSON files are ignored. Use a directory containing only metadata for
-the intended session; files are not deduplicated or silently skipped on errors.
-Missing/empty directories, malformed JSON, and invalid streams are rejected.
-Each mapping rereads the files; it never modifies them or contacts the GUI.
+The acquisition mapper finds the immediate `Ephys Metadata Generator XXX`
+directory under `data_dir`, where `XXX` is a numeric processor ID. Multiple
+matching directories are rejected as ambiguous rather than silently combined.
+It reads all top-level `.json` files there (case-insensitive extension) in
+filename order, one DataStream object per file. Other dataset folders,
+subdirectories, and non-JSON files are ignored. Missing/empty directories,
+malformed JSON, and invalid streams are rejected; files are never silently
+skipped. The old `app`, `processor_id`, and `metadata_dir` arguments are removed.
 
 ### Acquisition validation and lifecycle
 
 The mapper supports `map()` (or CLABE's inherited `run()`), `is_mapped()`,
 `mapped`, `session_schema()`, and `session_name`. Before successful mapping,
 `is_mapped()` returns false and accessing `mapped`/`session_schema()` raises
-`ValueError`. Each mapping fetches fresh history; a failed refresh invalidates
+`ValueError`. Each mapping rereads saved history; a failed refresh invalidates
 the previous result.
 
 Acquisition start/end bounds are the earliest start and latest end across all
 returned streams; stream order and device configurations are preserved.
-Empty history, non-idle GUI state, missing/timezone-naive timestamps, reversed
-stream bounds, and invalid schema fields are rejected. HTTP errors propagate.
+Empty history, missing/timezone-naive timestamps, reversed stream bounds, and
+invalid schema fields are rejected. File-access errors propagate.
 Optional `stimulus_epochs` can be supplied by the experiment; no behavior-specific
 stimulus metadata is fabricated.
 
-**Live-source lifecycle:** the caller must clear the metadata processor's history before
-starting a new session, coordinate recording, stop acquisition, and then map
-before closing the GUI. The mapper never clears history, starts/stops acquisition,
-or writes files. It cannot detect whether the processor history includes an
-earlier subject/session. The original `exampleMapper.py` remains a live
-acquisition demonstration, not an offline test.
+**Lifecycle:** map only completed datasets after their metadata files have
+finished being written. Neither mapper controls recording, clears history, or
+writes files. The caller must ensure the chosen dataset belongs to the supplied
+session. The original `exampleMapper.py` remains a separate live acquisition
+demonstration, not an offline test.
 
 ## Instrument metadata
 
@@ -125,11 +93,13 @@ acquisition demonstration, not an offline test.
 same CLABE `map()`/`run()`, `mapped`, `is_mapped()`, and `rig_schema()` contract
 as the VrForaging instrument mapper.
 
-Supply exactly one configuration source: `xml_path` for offline mapping or
-`app=app` with a configured `OpenEphysApp` to fetch the running GUI's
-configuration through `app.client` using `GET /api/config`. Neither mapper
-requires importing the private HTTP client class. Construction performs no HTTP
-requests. Mapping does not launch the GUI, change recording state, or write files.
+Pass the same dataset root as `data_dir`. The mapper checks immediate
+`Record Node XXX` directories in lexicographic name order and reads the first
+available `settings.xml`. Nodes without that exact file are skipped;
+`settings_2.xml`, root-level settings, and nested experiment files are not used.
+A malformed selected settings file raises an error rather than falling through
+to a different snapshot. The old `app` and `xml_path` arguments are removed.
+Discovery and reads happen during mapping, not construction.
 
 The XML provides computer name/OS and Neuropixels probes, slots, ports, part
 numbers, and firmware. The mapper deduplicates repeated physical probe serials,
@@ -164,7 +134,7 @@ acquisition = Acquisition.model_validate_json(
     Path("acquisition.json").read_text(encoding="utf-8")
 )
 mapper = AindInstrumentDataMapper(
-    xml_path=Path("src/example.xml"),  # Or replace with app=app.
+    data_dir=Path(r"C:\Users\joshs\Documents\Open Ephys\2026-10-23_14-43-15"),
     instrument_id="EPHYS1",  # Supply the actual instrument identifier.
     modification_date=date(2026, 10, 23),  # Actual hardware modification date.
     coordinate_system=CoordinateSystemLibrary.BREGMA_ARI,  # Only if applicable.
@@ -198,6 +168,5 @@ python -m pip install pytest
 python -m pytest
 ```
 
-Tests mock all GUI HTTP requests and require no hardware. Run the corresponding
-client tests from the CLABE root with `python -m pytest tests/apps/test_open_ephys.py`
-in an environment with CLABE's test dependencies.
+Tests build temporary saved-dataset layouts and fail any attempted HTTP request.
+They require no GUI or hardware.

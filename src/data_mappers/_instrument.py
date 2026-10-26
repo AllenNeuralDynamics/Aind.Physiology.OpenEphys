@@ -22,8 +22,9 @@ from aind_data_schema.core.instrument import Instrument
 from aind_data_schema_models.devices import ProbeModel
 from aind_data_schema_models.modalities import Modality
 from aind_data_schema_models.organizations import Organization
-from clabe.apps.open_ephys import OpenEphysApp
 from clabe.data_mapper import aind_data_schema as ads
+
+from ._dataset import find_settings_xml
 
 logger = logging.getLogger(__name__)
 
@@ -57,10 +58,10 @@ def _positive_int(element: ET.Element, attribute: str) -> int:
 
 
 class AindInstrumentDataMapper(ads.AindDataSchemaRigDataMapper):
-    """Build ephys hardware metadata from a saved or running GUI configuration.
+    """Build ephys hardware metadata from a saved Open Ephys dataset.
 
-    Supply exactly one of ``app`` or ``xml_path``. Live configuration is read
-    through the configured ``OpenEphysApp.client``. Probe-to-manipulator
+    Read the first settings.xml in sorted ``Record Node XXX`` directories
+    under ``data_dir``, never the live GUI configuration. Probe-to-manipulator
     associations come from the supplied Acquisition's EphysAssemblyConfig
     objects, matched to XML probe names. Manufacturer is explicitly unknown;
     acquisition configurations do not describe manipulator hardware details.
@@ -74,20 +75,16 @@ class AindInstrumentDataMapper(ads.AindDataSchemaRigDataMapper):
 
     def __init__(
         self,
+        data_dir: str | Path,
         *,
         instrument_id: str,
         modification_date: date,
         coordinate_system: CoordinateSystem,
         acquisition: Acquisition,
-        app: OpenEphysApp | None = None,
-        xml_path: str | Path | None = None,
         location: str | None = None,
         session_name: str | None = None,
     ) -> None:
-        if (app is None) == (xml_path is None):
-            raise ValueError("Supply exactly one of app or xml_path.")
-        self.app = app
-        self.xml_path = Path(xml_path) if xml_path is not None else None
+        self.data_dir = Path(data_dir)
         self.instrument_id = instrument_id
         self.modification_date = modification_date
         self.coordinate_system = coordinate_system
@@ -111,11 +108,7 @@ class AindInstrumentDataMapper(ads.AindDataSchemaRigDataMapper):
         """Read fresh XML and map it, invalidating any prior cached result."""
         logger.info("Mapping Open Ephys Instrument metadata.")
         self._mapped = None
-        if self.app is not None:
-            root = ET.fromstring(self.app.client.get_config())
-        else:
-            assert self.xml_path is not None
-            root = ET.parse(self.xml_path).getroot()
+        root = ET.parse(find_settings_xml(self.data_dir)).getroot()
         self._mapped = self._map(root)
         return self._mapped
 
