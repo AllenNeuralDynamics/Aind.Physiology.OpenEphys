@@ -1,3 +1,4 @@
+param([switch]$NoLaunch)
 Push-Location $PSScriptRoot
 $version = "1.0.1"
 if (!(Test-Path "./open-ephys.exe")) {
@@ -9,5 +10,5 @@ if (!(Test-Path "./open-ephys.exe")) {
     Remove-Item -Path "temp" -Recurse -Force
     Remove-Item -Path "temp.zip"
 }
-& .\open-ephys.exe
+if (!$NoLaunch) { & .\open-ephys.exe }
 Pop-Location

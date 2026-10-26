@@ -1,37 +1,37 @@
 # Aind.Physiology.OpenEphys
 
-A repository with a deployable version of the Open Ephys GUI.
+![CI](https://github.com/AllenNeuralDynamics/Aind.Physiology.OpenEphys/actions/workflows/openephys-cicd.yml/badge.svg)
+<!-- [![PyPI - Version](https://img.shields.io/pypi/v/aind-physiology-openephys)](https://pypi.org/project/aind-physiology-openephys/) -->
+[![License](https://img.shields.io/badge/license-MIT-brightgreen)](LICENSE)
+[![ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
 
-## Instructions
+A repository with a deployable version of the Open Ephys GUI, plus the Python packages that support it.
+
+## Repository layout
+
+| Path | Description |
+| --- | --- |
+| `.open-ephys/` | Scripts to download and launch the Open Ephys GUI |
+| `src/example.xml` | Example Open Ephys signal chain |
+| `src/packages/aind_physiology_openephys` | Top-level, publishable Python package (`aind-physiology-openephys`) |
+| `src/packages/aind_physiology_openephys_data_mappers` | Internal data mappers (`aind-physiology-openephys-data-mappers`), not published |
+
+## Deploying the Open Ephys GUI
 
 1. Clone the repository to your local machine
 2. [Follow the instructions](https://open-ephys.github.io/gui-docs/User-Manual/Installing-the-GUI.html#via-zip-file) and install necessary 3rd party dependencies
 3. Run `./.open-ephys/setup.ps1` to download and launch Open Ephys GUI
 4. Run your chain by passing it as an argument to `./.open-ephys/open-ephys.exe`: `./.open-ephys/open-ephys.exe ./src/example.xml`
+
 ## Acquisition metadata
 
 `src/data_mappers/_acquisition.py` provides `AindAcquisitionDataMapper`, following
 the CLABE session-mapper interface used by VrForaging. Both mappers read only
 previously saved datasets; they never contact a running Open Ephys application.
+
 Pass the dataset root as `data_dir`, not an individual processor directory or
 XML path. Other experimental/session metadata remains caller-supplied.
-
-Use Python 3.11 or newer, CLABE's mapper base classes, and AIND schema v2.
-From this repository's root, in your chosen environment:
-
-```powershell
-python -m pip install -e ../clabe "aind-data-schema>=2,<3"
-```
-
-The tests were validated with `aind-data-schema==2.9.2`. The plugin's exported
-configuration fields must match the installed schema version; the mapper
-reports validation errors rather than silently migrating incompatible schemas.
-This repository is not yet a packaged Python distribution, so the example below
-uses a repository-relative import when run from its root.
-
-After recording is complete and all metadata files have been saved, supply
-the dataset root, actual session file, instrument ID, and experiment details.
-The GUI can be closed:
 
 ```python
 from pathlib import Path
@@ -57,36 +57,6 @@ acquisition = mapper.map()
 acquisition.write_standard_file(prefix="ephys")
 ```
 
-The acquisition mapper finds the immediate `Ephys Metadata Generator XXX`
-directory under `data_dir`, where `XXX` is a numeric processor ID. Multiple
-matching directories are rejected as ambiguous rather than silently combined.
-It reads all top-level `.json` files there (case-insensitive extension) in
-filename order, one DataStream object per file. Other dataset folders,
-subdirectories, and non-JSON files are ignored. Missing/empty directories,
-malformed JSON, and invalid streams are rejected; files are never silently
-skipped. The old `app`, `processor_id`, and `metadata_dir` arguments are removed.
-
-### Acquisition validation and lifecycle
-
-The mapper supports `map()` (or CLABE's inherited `run()`), `is_mapped()`,
-`mapped`, `session_schema()`, and `session_name`. Before successful mapping,
-`is_mapped()` returns false and accessing `mapped`/`session_schema()` raises
-`ValueError`. Each mapping rereads saved history; a failed refresh invalidates
-the previous result.
-
-Acquisition start/end bounds are the earliest start and latest end across all
-returned streams; stream order and device configurations are preserved.
-Empty history, missing/timezone-naive timestamps, reversed stream bounds, and
-invalid schema fields are rejected. File-access errors propagate.
-Optional `stimulus_epochs` can be supplied by the experiment; no behavior-specific
-stimulus metadata is fabricated.
-
-**Lifecycle:** map only completed datasets after their metadata files have
-finished being written. Neither mapper controls recording, clears history, or
-writes files. The caller must ensure the chosen dataset belongs to the supplied
-session. The original `exampleMapper.py` remains a separate live acquisition
-demonstration, not an offline test.
-
 ## Instrument metadata
 
 `src/data_mappers/_instrument.py` provides `AindInstrumentDataMapper`, using the
@@ -100,26 +70,6 @@ available `settings.xml`. Nodes without that exact file are skipped;
 A malformed selected settings file raises an error rather than falling through
 to a different snapshot. The old `app` and `xml_path` arguments are removed.
 Discovery and reads happen during mapping, not construction.
-
-The XML provides computer name/OS and Neuropixels probes, slots, ports, part
-numbers, and firmware. The mapper deduplicates repeated physical probe serials,
-so the four quad-base entries in `src/example.xml` become one probe/assembly.
-Disabled probes remain in the Instrument because it describes configured
-hardware, not only the devices recorded in a particular acquisition.
-
-Pass an `aind_data_schema.core.acquisition.Acquisition` object as `acquisition`
-(for example, the result of the acquisition mapper above). The instrument mapper
-uses each stream's `EphysAssemblyConfig` to associate `probes[].device_name`
-with `manipulator.device_name`, preserving the assembly's `device_name`.
-Probe names must match XML `custom_probe_name` (or the probe serial number when
-the XML name is empty). Every configured XML probe needs an association, even
-if disabled for acquisition. Repeated associations across recordings are
-deduplicated; conflicting associations and blank device names are rejected.
-
-Acquisition configurations do not supply manipulator manufacturer, model, or
-serial number. Generated manipulators use the recorded device name, manufacturer
-`Unknown`, and unset model/serial rather than fabricated hardware details.
-Instrument ID, modification date, and coordinate system remain explicit inputs.
 
 ```python
 from datetime import date
@@ -145,28 +95,19 @@ instrument = mapper.map()
 instrument.write_standard_file(prefix="ephys")
 ```
 
-Ephys assemblies group probes with their acquisition-associated manipulator. Basestation
-ports refer to probe names, and basestations connect to the computer described
-in the XML, not the machine running the mapper. Carrier serial values of `0` or
-`UNKNOWN` are left unset; raw carrier/connect-board identifiers are preserved in
-the basestation's `additional_settings`.
+## Python development
 
-Currently supported probe models are the example's Neuropixels 2.0 single-shank
-and quad-base variants. Unsupported models, missing manipulators, conflicting
-hardware entries, duplicate probe names, and incomplete XML are errors rather
-than silently guessed metadata. Headstages and other signal-chain hardware
-are not yet mapped. `session_name` may be supplied if a caller needs a session
-association; accessing that property without supplying it raises `ValueError`.
-As with the acquisition mapper, a failed mapping invalidates any cached result.
-
-## Offline tests
-
-From this repository root:
+This repository is a [uv workspace](https://docs.astral.sh/uv/concepts/projects/workspaces/).
 
 ```powershell
-python -m pip install pytest
-python -m pytest
+uv sync --all-packages
+uv run pytest
+uv run ruff format --check; uv run ruff check; uv run codespell
 ```
 
-Tests build temporary saved-dataset layouts and fail any attempted HTTP request.
-They require no GUI or hardware.
+Install the top-level package with `pip install aind-physiology-openephys`. The data mappers can be installed from GitHub, see the [package README](src/packages/aind_physiology_openephys_data_mappers/README.md).
+
+## Releasing
+
+Publishing a GitHub release tagged `vX.Y.Z` sets the version of `aind-physiology-openephys`, builds it, and publishes it to PyPI. The data-mappers package is never published.
+
