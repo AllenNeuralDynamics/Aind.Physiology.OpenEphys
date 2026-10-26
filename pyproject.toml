@@ -1,0 +1,33 @@
+[tool.pytest.ini_options]
+addopts = "--import-mode=importlib"
+testpaths = [
+    "src/packages/aind_physiology_openephys/tests",
+    "src/packages/aind_physiology_openephys_data_mappers/tests",
+]
+
+[tool.uv.workspace]
+members = [
+    "src/packages/aind_physiology_openephys",
+    "src/packages/aind_physiology_openephys_data_mappers",
+]
+
+[tool.uv.sources]
+aind-physiology-openephys = { workspace = true }
+aind-physiology-openephys-data-mappers = { workspace = true }
+
+[dependency-groups]
+dev = [
+    "ruff",
+    "codespell",
+    "pytest",
+    "pytest-cov",
+    "aind-physiology-openephys-data-mappers",
+]
+
+[tool.codespell]
+skip = '.git,*.pdf,*.svg,uv.lock'
+ignore-words-list = 'nd'
+
+[tool.uv]
+required-version = '>=0.8.4'
+default-groups = ["dev"]
