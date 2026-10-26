@@ -5,8 +5,12 @@ from pathlib import Path
 from pydantic import Field
 from pydantic_settings import BaseSettings, CliApp
 
-logger = logging.getLogger(__name__)
+from ._acquisition import AindAcquisitionDataMapper
+from ._instrument import AindInstrumentDataMapper
 
+__all__ = ["AindAcquisitionDataMapper", "AindInstrumentDataMapper"]
+
+logger = logging.getLogger(__name__)
 
 class DataMapperCli(BaseSettings, cli_kebab_case=True):
     data_path: os.PathLike = Field(description="Path to the session data directory.")
