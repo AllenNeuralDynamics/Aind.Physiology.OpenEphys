@@ -1,0 +1,148 @@
+name: OpenEphys test suite
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - dev*
+      - release*
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  tests:
+    runs-on: windows-latest
+    name: OpenEphys unit tests
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: astral-sh/setup-uv@v8.2.0
+        with:
+          enable-cache: true
+
+      - name: Install python dependencies
+        run: uv sync --all-packages
+
+      - name: Run ruff format
+        run: uv run ruff format --check
+
+      - name: Run ruff check
+        run: uv run ruff check
+
+      - name: Run codespell
+        run: uv run codespell
+
+      # Exit code 5 means no tests were collected, which is fine until real tests exist.
+      - name: Run python unit tests
+        run: |
+          uv run pytest
+          if ($LASTEXITCODE -eq 5) { exit 0 }
+
+      - name: Build all packages
+        run: uv build --all-packages
+
+  gui-bootstrap:
+    runs-on: windows-latest
+    name: Bootstrap Open Ephys GUI
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Download Open Ephys GUI
+        shell: pwsh
+        run: ./.open-ephys/setup.ps1 -NoLaunch
+
+      - name: Check GUI launches with example signal chain
+        shell: pwsh
+        run: |
+          if (!(Test-Path ./.open-ephys/open-ephys.exe)) { throw "open-ephys.exe was not installed" }
+          $proc = Start-Process -FilePath (Resolve-Path ./.open-ephys/open-ephys.exe) `
+            -ArgumentList (Resolve-Path ./src/example.xml) -PassThru
+          Start-Sleep -Seconds 30
+          if ($proc.HasExited) { throw "Open Ephys GUI exited early with code $($proc.ExitCode)" }
+          Write-Host "Open Ephys GUI is running after 30s"
+          Stop-Process -Id $proc.Id -Force
+
+  prepare-release:
+    runs-on: ubuntu-latest
+    name: Set version
+    needs: [tests, gui-bootstrap]
+    if: github.event_name == 'release' && github.event.action == 'published'
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          ref: main
+          # PAT from an admin account so the version-bump commit and tag
+          # push below can bypass the branch ruleset protecting `main`.
+          token: ${{ secrets.RELEASE_PAT }}
+
+      - uses: astral-sh/setup-uv@v8.2.0
+        with:
+          enable-cache: true
+
+      - name: Extract version from tag
+        id: get_version
+        shell: bash
+        run: |
+          version=$(echo "${{ github.event.release.tag_name }}" | sed 's/^v//')
+          echo "version=$version" >> $GITHUB_OUTPUT
+          echo "Setting version to: $version"
+
+      - name: Set version
+        run: |
+          uv version ${{ steps.get_version.outputs.version }} --package aind-physiology-openephys --dry-run
+          uv version ${{ steps.get_version.outputs.version }} --package aind-physiology-openephys
+
+      # The data-mappers package is internal-only and must not be added to dist/.
+      - name: Build publishable packages
+        run: uv build --package aind-physiology-openephys
+
+      - name: Upload wheels as artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: dist
+          path: dist/
+          retention-days: 1
+
+      - name: Commit version changes
+        shell: bash
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          git diff --cached --quiet && echo "No changes to commit" && exit 0
+          git commit -m "Set version ${{ steps.get_version.outputs.version }} [skip ci]"
+          git push origin main
+          # Move the release tag to point to this new commit
+          git tag -fa "${{ github.event.release.tag_name }}" -m "${{ github.event.release.tag_name }}"
+          git push origin "${{ github.event.release.tag_name }}" --force
+
+  publish-to-pypi:
+    runs-on: ubuntu-latest
+    name: Publish to PyPI
+    needs: prepare-release
+    # Publishing is disabled for now. Remove this line to re-enable it.
+    if: false
+    steps:
+      - name: Download wheels artifact
+        uses: actions/download-artifact@v5
+        with:
+          name: dist
+          path: dist/
+
+      - uses: astral-sh/setup-uv@v8.2.0
+        with:
+          enable-cache: true
+
+      - name: Publish to PyPI
+        run: uv publish --token ${{ secrets.AIND_PYPI_TOKEN }}
+
+      - name: Upload wheels to GitHub release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ github.event.release.tag_name }}
+          files: dist/*
