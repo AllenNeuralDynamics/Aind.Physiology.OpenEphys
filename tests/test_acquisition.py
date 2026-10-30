@@ -258,8 +258,12 @@ def test_naive_timestamps_use_schema_timezone(mapper, metadata_dir):
 
     result = mapper.map()
 
-    assert result.acquisition_start_time.replace(tzinfo=None) == datetime(2026, 10, 22, 16)
-    assert result.acquisition_end_time.replace(tzinfo=None) == datetime(2026, 10, 22, 16, 5)
+    assert result.acquisition_start_time.replace(tzinfo=None) == datetime(
+        2026, 10, 22, 16
+    )
+    assert result.acquisition_end_time.replace(tzinfo=None) == datetime(
+        2026, 10, 22, 16, 5
+    )
     assert result.acquisition_start_time.utcoffset() is not None
     assert result.acquisition_end_time.utcoffset() is not None
 
