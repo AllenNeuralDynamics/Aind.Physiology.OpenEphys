@@ -31,7 +31,9 @@ logger = logging.getLogger(__name__)
 _PROBE_MODELS = {
     "Neuropixels 1.0": ProbeModel.NP1,
     "Neuropixels 2.0 - Single Shank": ProbeModel.NP2_SINGLE_SHANK,
+    "Neuropixels 2.0 Single Shank": ProbeModel.NP2_SINGLE_SHANK,
     "Neuropixels 2.0 - Multishank": ProbeModel.NP2_MULTI_SHANK,
+    "Neuropixels 2.0 Multishank": ProbeModel.NP2_MULTI_SHANK,
     "Neuropixels 2.0 Quad Base": ProbeModel.NP2_QUAD_BASE,
     "Neuropixels Ultra" : ProbeModel.NP_UHD_FIXED,
     "Neuropixels Ultra (Phase 1)": ProbeModel.NP_UHD_FIXED,
@@ -57,13 +59,64 @@ def _positive_int(element: ET.Element, attribute: str) -> int:
     return value
 
 
+def _stream_group_name(streams: list[ET.Element], count: int) -> str:
+    """Read a probe's name while checking its band/shank stream suffixes."""
+    names = [_required(stream, "name") for stream in streams]
+    if count == 1:
+        return names[0]
+    suffixes = ["-1", "-2", "-3", "-4"] if count == 4 else ["-AP", "-LFP"]
+    name = names[0].removesuffix(suffixes[0])
+    if not name or names != [name + suffix for suffix in suffixes]:
+        raise ValueError(f"Inconsistent probe stream names: {names}; expected common name with suffixes {suffixes}.")
+    return name
+
+
+def _stream_probe_names(processor: ET.Element) -> dict[ET.Element, str]:
+    """Match streams to physical probes in saved processor order."""
+    entries = processor.findall("./EDITOR/CUSTOM_PARAMETERS/NP_PROBE")
+    if not entries:
+        return {}
+    streams = processor.findall("STREAM")
+    offset = 0
+    physical_names: dict[str, str] = {}
+    names: dict[ET.Element, str] = {}
+    for entry in entries:
+        serial = _required(entry, "probe_serial_number")
+        if serial in {"0", "UNKNOWN"}:
+            raise ValueError("A physical probe must have a known, nonzero serial number.")
+        if serial not in physical_names:
+            model_name = _required(entry, "probe_name")
+            if model_name not in _PROBE_MODELS:
+                raise ValueError(f"Unsupported probe model '{model_name}' for probe {serial}.")
+            model = _PROBE_MODELS[model_name]
+            if model == ProbeModel.NP2_QUAD_BASE:
+                count = 4
+            elif model in {ProbeModel.NP2_SINGLE_SHANK, ProbeModel.NP2_MULTI_SHANK}:
+                count = 1
+            else:
+                count = 2
+            group = streams[offset : offset + count]
+            if len(group) != count:
+                raise ValueError(f"Expected {count} streams for probe {serial}, found {len(group)}.")
+            physical_names[serial] = _stream_group_name(group, count)
+            offset += count
+        names[entry] = physical_names[serial]
+    if offset != len(streams):
+        raise ValueError(f"Unmatched streams in processor {_required(processor, 'name')}: {len(streams) - offset}.")
+    return names
+
+
 class AindInstrumentDataMapper(DataMapper[Instrument]):
     """Build ephys hardware metadata from a saved Open Ephys dataset.
 
     Read the first settings.xml in sorted ``Record Node XXX`` directories
     under ``data_dir``, never the live GUI configuration. Probe-to-manipulator
     associations come from the supplied Acquisition's EphysAssemblyConfig
-    objects, matched to XML probe names. Manufacturer is explicitly unknown;
+    objects, matched to names derived from ordered XML STREAM groups. Each
+    physical probe consumes four streams for Quad Base, one for NP2 single-
+    or multishank, and two for other supported models. AP/LFP and numbered
+    shank suffixes are removed; custom_probe_name is not used.
+    Manufacturer is explicitly unknown;
     acquisition configurations do not describe manipulator hardware details.
     Instrument identity, modification date, and coordinate system are explicit
     caller inputs, not inferred from the computer or XML save date.
@@ -125,6 +178,9 @@ class AindInstrumentDataMapper(DataMapper[Instrument]):
         entries = root.findall("./SIGNALCHAIN/PROCESSOR/EDITOR/CUSTOM_PARAMETERS/NP_PROBE")
         if not entries:
             raise ValueError("Configuration contains no supported NP_PROBE hardware entries.")
+        stream_names = {}
+        for processor in root.findall("./SIGNALCHAIN/PROCESSOR"):
+            stream_names.update(_stream_probe_names(processor))
         probes: dict[str, tuple[ET.Element, tuple[int, int, int]]] = {}
         basestations: dict[int, dict[str, str]] = {}
         occupied: dict[tuple[int, int, int], str] = {}
@@ -151,15 +207,15 @@ class AindInstrumentDataMapper(DataMapper[Instrument]):
             occupied[address] = serial
             if serial in probes:
                 previous, previous_address = probes[serial]
-                keys = ("custom_probe_name", "probe_name", "probe_part_number")
+                keys = ("probe_name", "probe_part_number")
                 if address != previous_address or any(entry.get(k) != previous.get(k) for k in keys):
                     raise ValueError(f"Conflicting hardware entries for probe {serial}.")
+                if stream_names[entry] != stream_names[previous]:
+                    raise ValueError(f"Conflicting stream names for probe {serial}.")
                 continue
             probes[serial] = (entry, address)
-            probe_name = entry.get("custom_probe_name", "").strip() or serial
+            probe_name = stream_names[entry]
             model_name = _required(entry, "probe_name")
-            if model_name not in _PROBE_MODELS:
-                raise ValueError(f"Unsupported probe model '{model_name}' for probe {serial}.")
             if probe_name in names:
                 raise ValueError(f"Duplicate hardware name '{probe_name}'.")
             names.add(probe_name)

@@ -85,6 +85,14 @@ A malformed selected settings file raises an error rather than falling through
 to a different snapshot. The old `app` and `xml_path` arguments are removed.
 Discovery and reads happen during mapping, not construction.
 
+Probe names come from ordered `STREAM` entries in each Neuropixels processor,
+not `NP_PROBE.custom_probe_name`. Each physical probe consumes four streams
+for Quad Base, one for Neuropixels 2.0 single- or multishank, and two for other
+supported models. Repeated Quad Base `NP_PROBE` shank entries do not consume
+additional groups. The mapper removes `-1` through `-4` or `-AP`/`-LFP` suffixes
+from grouped streams and preserves single-stream names unchanged. Missing,
+extra, or inconsistently named streams are rejected rather than guessed.
+
 ```python
 from datetime import date
 from pathlib import Path
@@ -120,6 +128,20 @@ uv run ruff format --check; uv run ruff check; uv run codespell
 ```
 
 Install the top-level package with `pip install aind-physiology-openephys`. The data mappers can be installed from GitHub, see the [package README](src/packages/aind_physiology_openephys_data_mappers/README.md).
+
+### Recorded-fixture regression tests
+
+Run `uv run pytest tests/test_example_dataset.py` to validate the JSON recording
+history and saved signal-chain XML in `tests/example_data_directory` against the
+installed AIND schema. Tests cover acquisition bounds, hardware mapping,
+quad-base deduplication, file serialization/revalidation, input immutability,
+and rejection of timezone-less timestamps. Both XML snapshots are exercised;
+normal dataset discovery still selects only `settings.xml`.
+
+The supplied JSON files include manipulator names and probe labels matching
+the ordered XML stream groups. Instrument tests map these files directly,
+without rewriting probe or manipulator identities. All destructive test cases
+operate on temporary copies; the original files remain unchanged.
 
 ## Releasing
 

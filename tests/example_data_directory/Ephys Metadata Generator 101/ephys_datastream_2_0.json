@@ -1,0 +1,618 @@
+{
+      "object_type": "Data stream",
+      "stream_start_time": "2026-10-23T14:43:54.578-07:00",
+      "stream_end_time": "2026-10-23T14:44:09.762-07:00",
+      "modalities": [
+        {
+          "name": "Extracellular electrophysiology",
+          "abbreviation": "ecephys"
+        }
+      ],
+      "code": null,
+      "notes": null,
+      "active_devices": [
+        "Ephys_assemblyProbeA",
+        "Ephys_assemblyProbeB",
+        "Ephys_assemblyProbeC",
+        "Ephys_assemblyProbeD",
+        "Ephys_assemblyProbeE",
+        "Ephys_assemblyProbeF"
+      ],
+      "configurations": [
+        {
+          "object_type": "Ephys assembly config",
+          "device_name": "Ephys_assemblyProbeA",
+          "manipulator": {
+            "object_type": "Manipulator config",
+            "device_name": "SN20190",
+            "coordinate_system": {
+              "object_type": "Coordinate system",
+              "name": "MPM_MANIP_RFB",
+              "origin": "Tip",
+              "axes": [
+                {
+                  "object_type": "Axis",
+                  "name": "X",
+                  "direction": "Left_to_right"
+                },
+                {
+                  "object_type": "Axis",
+                  "name": "Y",
+                  "direction": "Back_to_front"
+                },
+                {
+                  "object_type": "Axis",
+                  "name": "Z",
+                  "direction": "Up_to_down"
+                }
+              ],
+              "axis_unit": "millimeter"
+            },
+            "local_axis_positions": {
+              "object_type": "Translation",
+              "translation": [
+                0.0,
+                0.0,
+                0.0
+              ]
+            }
+          },
+          "probes": [
+            {
+              "object_type": "Probe config",
+              "device_name": "ProbeA",
+              "primary_targeted_structure": {
+                "atlas": "CCFv3",
+                "name": "root",
+                "acronym": "root",
+                "id": "997"
+              },
+              "other_targeted_structure": null,
+              "atlas_coordinate": null,
+              "coordinate_system": {
+                "object_type": "Coordinate system",
+                "name": "MPM_MANIP_RFB",
+                "origin": "Tip",
+                "axes": [
+                  {
+                    "object_type": "Axis",
+                    "name": "X",
+                    "direction": "Left_to_right"
+                  },
+                  {
+                    "object_type": "Axis",
+                    "name": "Y",
+                    "direction": "Back_to_front"
+                  },
+                  {
+                    "object_type": "Axis",
+                    "name": "Z",
+                    "direction": "Up_to_down"
+                  }
+                ],
+                "axis_unit": "millimeter"
+              },
+              "transform": [
+                {
+                  "object_type": "Translation",
+                  "translation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0
+                  ]
+                }
+              ],
+              "dye": "CM-DiI",
+              "notes": "Hemisphere: None; Hole #: 0; Inserted: true; On Target: true; Recorded: true"
+            }
+          ],
+          "modules": [
+            {
+              "object_type": "MIS module config",
+              "arc_angle": 0.0,
+              "module_angle": 0.0,
+              "rotation_angle": 0.0,
+              "angle_unit": "degrees",
+              "notes": null
+            }
+          ]
+        },
+        {
+          "object_type": "Ephys assembly config",
+          "device_name": "Ephys_assemblyProbeB",
+          "manipulator": {
+            "object_type": "Manipulator config",
+            "device_name": "SN20189",
+            "coordinate_system": {
+              "object_type": "Coordinate system",
+              "name": "MPM_MANIP_RFB",
+              "origin": "Tip",
+              "axes": [
+                {
+                  "object_type": "Axis",
+                  "name": "X",
+                  "direction": "Left_to_right"
+                },
+                {
+                  "object_type": "Axis",
+                  "name": "Y",
+                  "direction": "Back_to_front"
+                },
+                {
+                  "object_type": "Axis",
+                  "name": "Z",
+                  "direction": "Up_to_down"
+                }
+              ],
+              "axis_unit": "millimeter"
+            },
+            "local_axis_positions": {
+              "object_type": "Translation",
+              "translation": [
+                0.0,
+                0.0,
+                0.0
+              ]
+            }
+          },
+          "probes": [
+            {
+              "object_type": "Probe config",
+              "device_name": "ProbeB",
+              "primary_targeted_structure": {
+                "atlas": "CCFv3",
+                "name": "root",
+                "acronym": "root",
+                "id": "997"
+              },
+              "other_targeted_structure": null,
+              "atlas_coordinate": null,
+              "coordinate_system": {
+                "object_type": "Coordinate system",
+                "name": "MPM_MANIP_RFB",
+                "origin": "Tip",
+                "axes": [
+                  {
+                    "object_type": "Axis",
+                    "name": "X",
+                    "direction": "Left_to_right"
+                  },
+                  {
+                    "object_type": "Axis",
+                    "name": "Y",
+                    "direction": "Back_to_front"
+                  },
+                  {
+                    "object_type": "Axis",
+                    "name": "Z",
+                    "direction": "Up_to_down"
+                  }
+                ],
+                "axis_unit": "millimeter"
+              },
+              "transform": [
+                {
+                  "object_type": "Translation",
+                  "translation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0
+                  ]
+                }
+              ],
+              "dye": "CM-DiI",
+              "notes": "Hemisphere: None; Hole #: 0; Inserted: true; On Target: true; Recorded: true"
+            }
+          ],
+          "modules": [
+            {
+              "object_type": "MIS module config",
+              "arc_angle": 0.0,
+              "module_angle": 0.0,
+              "rotation_angle": 0.0,
+              "angle_unit": "degrees",
+              "notes": null
+            }
+          ]
+        },
+        {
+          "object_type": "Ephys assembly config",
+          "device_name": "Ephys_assemblyProbeC",
+          "manipulator": {
+            "object_type": "Manipulator config",
+            "device_name": "SN20188",
+            "coordinate_system": {
+              "object_type": "Coordinate system",
+              "name": "MPM_MANIP_RFB",
+              "origin": "Tip",
+              "axes": [
+                {
+                  "object_type": "Axis",
+                  "name": "X",
+                  "direction": "Left_to_right"
+                },
+                {
+                  "object_type": "Axis",
+                  "name": "Y",
+                  "direction": "Back_to_front"
+                },
+                {
+                  "object_type": "Axis",
+                  "name": "Z",
+                  "direction": "Up_to_down"
+                }
+              ],
+              "axis_unit": "millimeter"
+            },
+            "local_axis_positions": {
+              "object_type": "Translation",
+              "translation": [
+                0.0,
+                0.0,
+                0.0
+              ]
+            }
+          },
+          "probes": [
+            {
+              "object_type": "Probe config",
+              "device_name": "ProbeC",
+              "primary_targeted_structure": {
+                "atlas": "CCFv3",
+                "name": "root",
+                "acronym": "root",
+                "id": "997"
+              },
+              "other_targeted_structure": null,
+              "atlas_coordinate": null,
+              "coordinate_system": {
+                "object_type": "Coordinate system",
+                "name": "MPM_MANIP_RFB",
+                "origin": "Tip",
+                "axes": [
+                  {
+                    "object_type": "Axis",
+                    "name": "X",
+                    "direction": "Left_to_right"
+                  },
+                  {
+                    "object_type": "Axis",
+                    "name": "Y",
+                    "direction": "Back_to_front"
+                  },
+                  {
+                    "object_type": "Axis",
+                    "name": "Z",
+                    "direction": "Up_to_down"
+                  }
+                ],
+                "axis_unit": "millimeter"
+              },
+              "transform": [
+                {
+                  "object_type": "Translation",
+                  "translation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0
+                  ]
+                }
+              ],
+              "dye": "CM-DiI",
+              "notes": "Hemisphere: None; Hole #: 0; Inserted: true; On Target: true; Recorded: true"
+            }
+          ],
+          "modules": [
+            {
+              "object_type": "MIS module config",
+              "arc_angle": 0.0,
+              "module_angle": 0.0,
+              "rotation_angle": 0.0,
+              "angle_unit": "degrees",
+              "notes": null
+            }
+          ]
+        },
+        {
+          "object_type": "Ephys assembly config",
+          "device_name": "Ephys_assemblyProbeD",
+          "manipulator": {
+            "object_type": "Manipulator config",
+            "device_name": "SN20187",
+            "coordinate_system": {
+              "object_type": "Coordinate system",
+              "name": "MPM_MANIP_RFB",
+              "origin": "Tip",
+              "axes": [
+                {
+                  "object_type": "Axis",
+                  "name": "X",
+                  "direction": "Left_to_right"
+                },
+                {
+                  "object_type": "Axis",
+                  "name": "Y",
+                  "direction": "Back_to_front"
+                },
+                {
+                  "object_type": "Axis",
+                  "name": "Z",
+                  "direction": "Up_to_down"
+                }
+              ],
+              "axis_unit": "millimeter"
+            },
+            "local_axis_positions": {
+              "object_type": "Translation",
+              "translation": [
+                0.0,
+                0.0,
+                0.0
+              ]
+            }
+          },
+          "probes": [
+            {
+              "object_type": "Probe config",
+              "device_name": "ProbeD",
+              "primary_targeted_structure": {
+                "atlas": "CCFv3",
+                "name": "root",
+                "acronym": "root",
+                "id": "997"
+              },
+              "other_targeted_structure": null,
+              "atlas_coordinate": null,
+              "coordinate_system": {
+                "object_type": "Coordinate system",
+                "name": "MPM_MANIP_RFB",
+                "origin": "Tip",
+                "axes": [
+                  {
+                    "object_type": "Axis",
+                    "name": "X",
+                    "direction": "Left_to_right"
+                  },
+                  {
+                    "object_type": "Axis",
+                    "name": "Y",
+                    "direction": "Back_to_front"
+                  },
+                  {
+                    "object_type": "Axis",
+                    "name": "Z",
+                    "direction": "Up_to_down"
+                  }
+                ],
+                "axis_unit": "millimeter"
+              },
+              "transform": [
+                {
+                  "object_type": "Translation",
+                  "translation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0
+                  ]
+                }
+              ],
+              "dye": "CM-DiI",
+              "notes": "Hemisphere: None; Hole #: 0; Inserted: true; On Target: true; Recorded: true"
+            }
+          ],
+          "modules": [
+            {
+              "object_type": "MIS module config",
+              "arc_angle": 0.0,
+              "module_angle": 0.0,
+              "rotation_angle": 0.0,
+              "angle_unit": "degrees",
+              "notes": null
+            }
+          ]
+        },
+        {
+          "object_type": "Ephys assembly config",
+          "device_name": "Ephys_assemblyProbeE",
+          "manipulator": {
+            "object_type": "Manipulator config",
+            "device_name": "SN20192",
+            "coordinate_system": {
+              "object_type": "Coordinate system",
+              "name": "MPM_MANIP_RFB",
+              "origin": "Tip",
+              "axes": [
+                {
+                  "object_type": "Axis",
+                  "name": "X",
+                  "direction": "Left_to_right"
+                },
+                {
+                  "object_type": "Axis",
+                  "name": "Y",
+                  "direction": "Back_to_front"
+                },
+                {
+                  "object_type": "Axis",
+                  "name": "Z",
+                  "direction": "Up_to_down"
+                }
+              ],
+              "axis_unit": "millimeter"
+            },
+            "local_axis_positions": {
+              "object_type": "Translation",
+              "translation": [
+                0.0,
+                0.0,
+                0.0
+              ]
+            }
+          },
+          "probes": [
+            {
+              "object_type": "Probe config",
+              "device_name": "ProbeE",
+              "primary_targeted_structure": {
+                "atlas": "CCFv3",
+                "name": "root",
+                "acronym": "root",
+                "id": "997"
+              },
+              "other_targeted_structure": null,
+              "atlas_coordinate": null,
+              "coordinate_system": {
+                "object_type": "Coordinate system",
+                "name": "MPM_MANIP_RFB",
+                "origin": "Tip",
+                "axes": [
+                  {
+                    "object_type": "Axis",
+                    "name": "X",
+                    "direction": "Left_to_right"
+                  },
+                  {
+                    "object_type": "Axis",
+                    "name": "Y",
+                    "direction": "Back_to_front"
+                  },
+                  {
+                    "object_type": "Axis",
+                    "name": "Z",
+                    "direction": "Up_to_down"
+                  }
+                ],
+                "axis_unit": "millimeter"
+              },
+              "transform": [
+                {
+                  "object_type": "Translation",
+                  "translation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0
+                  ]
+                }
+              ],
+              "dye": "CM-DiI",
+              "notes": "Hemisphere: None; Hole #: 0; Inserted: true; On Target: true; Recorded: true"
+            }
+          ],
+          "modules": [
+            {
+              "object_type": "MIS module config",
+              "arc_angle": 0.0,
+              "module_angle": 0.0,
+              "rotation_angle": 0.0,
+              "angle_unit": "degrees",
+              "notes": null
+            }
+          ]
+        },
+        {
+          "object_type": "Ephys assembly config",
+          "device_name": "Ephys_assemblyProbeF",
+          "manipulator": {
+            "object_type": "Manipulator config",
+            "device_name": "SN20191",
+            "coordinate_system": {
+              "object_type": "Coordinate system",
+              "name": "MPM_MANIP_RFB",
+              "origin": "Tip",
+              "axes": [
+                {
+                  "object_type": "Axis",
+                  "name": "X",
+                  "direction": "Left_to_right"
+                },
+                {
+                  "object_type": "Axis",
+                  "name": "Y",
+                  "direction": "Back_to_front"
+                },
+                {
+                  "object_type": "Axis",
+                  "name": "Z",
+                  "direction": "Up_to_down"
+                }
+              ],
+              "axis_unit": "millimeter"
+            },
+            "local_axis_positions": {
+              "object_type": "Translation",
+              "translation": [
+                0.0,
+                0.0,
+                0.0
+              ]
+            }
+          },
+          "probes": [
+            {
+              "object_type": "Probe config",
+              "device_name": "ProbeF",
+              "primary_targeted_structure": {
+                "atlas": "CCFv3",
+                "name": "root",
+                "acronym": "root",
+                "id": "997"
+              },
+              "other_targeted_structure": null,
+              "atlas_coordinate": null,
+              "coordinate_system": {
+                "object_type": "Coordinate system",
+                "name": "MPM_MANIP_RFB",
+                "origin": "Tip",
+                "axes": [
+                  {
+                    "object_type": "Axis",
+                    "name": "X",
+                    "direction": "Left_to_right"
+                  },
+                  {
+                    "object_type": "Axis",
+                    "name": "Y",
+                    "direction": "Back_to_front"
+                  },
+                  {
+                    "object_type": "Axis",
+                    "name": "Z",
+                    "direction": "Up_to_down"
+                  }
+                ],
+                "axis_unit": "millimeter"
+              },
+              "transform": [
+                {
+                  "object_type": "Translation",
+                  "translation": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0
+                  ]
+                }
+              ],
+              "dye": "CM-DiI",
+              "notes": "Hemisphere: None; Hole #: 0; Inserted: true; On Target: true; Recorded: true"
+            }
+          ],
+          "modules": [
+            {
+              "object_type": "MIS module config",
+              "arc_angle": 0.0,
+              "module_angle": 0.0,
+              "rotation_angle": 0.0,
+              "angle_unit": "degrees",
+              "notes": null
+            }
+          ]
+        }
+      ],
+      "connections": []
+    }
