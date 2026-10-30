@@ -27,7 +27,10 @@ def processor(models, stream_names):
 @pytest.mark.parametrize(
     ("model", "names"),
     [
-        ("Neuropixels 2.0 Quad Base", ["Rig-Probe-1", "Rig-Probe-2", "Rig-Probe-3", "Rig-Probe-4"]),
+        (
+            "Neuropixels 2.0 Quad Base",
+            ["Rig-Probe-1", "Rig-Probe-2", "Rig-Probe-3", "Rig-Probe-4"],
+        ),
         ("Neuropixels 2.0 - Single Shank", ["Rig-Probe"]),
         ("Neuropixels 2.0 Single Shank", ["Rig-Probe"]),
         ("Neuropixels 2.0 - Multishank", ["Rig-Probe"]),
@@ -72,7 +75,9 @@ def test_mixed_models_advance_once_per_physical_probe():
         ],
     )
     names = _stream_probe_names(root)
-    assert [(entry.get("probe_serial_number"), name) for entry, name in names.items()] == [
+    assert [
+        (entry.get("probe_serial_number"), name) for entry, name in names.items()
+    ] == [
         ("100", "A"),
         *[("101", "B")] * 4,
         *[("102", "C")] * 4,
@@ -90,7 +95,9 @@ def test_single_stream_name_is_not_truncated(name):
 
 def test_stream_offsets_are_local_to_each_processor():
     first = processor(["Neuropixels Opto"], ["First-AP", "First-LFP"])
-    second = processor(["Neuropixels 2.0 Quad Base"], ["Second-1", "Second-2", "Second-3", "Second-4"])
+    second = processor(
+        ["Neuropixels 2.0 Quad Base"], ["Second-1", "Second-2", "Second-3", "Second-4"]
+    )
     assert set(_stream_probe_names(first).values()) == {"First"}
     assert set(_stream_probe_names(second).values()) == {"Second"}
     unrelated = ET.Element("PROCESSOR", name="Unrelated")
@@ -113,7 +120,9 @@ def test_incomplete_stream_groups_are_rejected(model, names):
 
 def test_unmatched_streams_are_rejected():
     with pytest.raises(ValueError, match="Unmatched streams"):
-        _stream_probe_names(processor(["Neuropixels 2.0 - Single Shank"], ["Probe", "Unexpected"]))
+        _stream_probe_names(
+            processor(["Neuropixels 2.0 - Single Shank"], ["Probe", "Unexpected"])
+        )
 
 
 @pytest.mark.parametrize(

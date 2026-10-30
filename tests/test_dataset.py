@@ -1,7 +1,10 @@
 """Saved dataset discovery must be deterministic and bounded to the dataset."""
 
 import pytest
-from aind_physiology_openephys_data_mappers._dataset import find_metadata_directory, find_settings_xml
+from aind_physiology_openephys_data_mappers._dataset import (
+    find_metadata_directory,
+    find_settings_xml,
+)
 
 
 @pytest.mark.parametrize("finder", [find_metadata_directory, find_settings_xml])

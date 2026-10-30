@@ -8,12 +8,23 @@ from xml.etree import ElementTree as ET
 import pytest
 from aind_behavior_services.session import Session
 from aind_data_schema.components.coordinates import CoordinateSystemLibrary
-from aind_data_schema.components.devices import Computer, EphysAssembly, NeuropixelsBasestation
-from aind_data_schema.core.acquisition import Acquisition, AcquisitionSubjectDetails, DataStream
+from aind_data_schema.components.devices import (
+    Computer,
+    EphysAssembly,
+    NeuropixelsBasestation,
+)
+from aind_data_schema.core.acquisition import (
+    Acquisition,
+    AcquisitionSubjectDetails,
+    DataStream,
+)
 from aind_data_schema.core.instrument import Instrument
 from aind_data_schema_models.devices import ProbeModel
 from aind_data_schema_models.organizations import Organization
-from aind_physiology_openephys_data_mappers import AindAcquisitionDataMapper, AindInstrumentDataMapper
+from aind_physiology_openephys_data_mappers import (
+    AindAcquisitionDataMapper,
+    AindInstrumentDataMapper,
+)
 
 EXAMPLE = Path(__file__).parents[1] / "src" / "example.xml"
 
@@ -39,14 +50,24 @@ def assembly_config(probe_name):
         "manipulator": {
             "device_name": f"Manipulator {probe_name}",
             "local_coordinate_system": coordinate_system,
-            "local_axis_positions": {"object_type": "Translation", "translation": [0.0, 0.0, 0.0]},
+            "local_axis_positions": {
+                "object_type": "Translation",
+                "translation": [0.0, 0.0, 0.0],
+            },
         },
         "probes": [
             {
                 "device_name": probe_name,
-                "primary_targeted_structure": {"atlas": "CCFv3", "name": "root", "acronym": "root", "id": "997"},
+                "primary_targeted_structure": {
+                    "atlas": "CCFv3",
+                    "name": "root",
+                    "acronym": "root",
+                    "id": "997",
+                },
                 "local_coordinate_system": coordinate_system,
-                "transform": [{"object_type": "Translation", "translation": [0.0, 0.0, 0.0]}],
+                "transform": [
+                    {"object_type": "Translation", "translation": [0.0, 0.0, 0.0]}
+                ],
             }
         ],
     }
@@ -54,11 +75,15 @@ def assembly_config(probe_name):
 
 @pytest.fixture
 def acquisition(root):
-    probe_names = dict.fromkeys(entry.get("custom_probe_name") for entry in root.iter("NP_PROBE"))
+    probe_names = dict.fromkeys(
+        entry.get("custom_probe_name") for entry in root.iter("NP_PROBE")
+    )
     stream = DataStream(
         stream_start_time="2026-10-23T14:43:15-07:00",
         stream_end_time="2026-10-23T14:44:09-07:00",
-        modalities=[{"name": "Extracellular electrophysiology", "abbreviation": "ecephys"}],
+        modalities=[
+            {"name": "Extracellular electrophysiology", "abbreviation": "ecephys"}
+        ],
         active_devices=[f"Recorded assembly {name}" for name in probe_names],
         configurations=[assembly_config(name) for name in probe_names],
     )
@@ -121,7 +146,9 @@ def test_example_hardware_and_roundtrip(options):
     assert stations[0].basestation_firmware_version == "3.0226"
     assert stations[0].bsc_firmware_version == "4.0233"
     assert stations[0].serial_number is None
-    assert stations[0].additional_settings.model_dump()["bsc_serial_number"] == "23131294"
+    assert (
+        stations[0].additional_settings.model_dump()["bsc_serial_number"] == "23131294"
+    )
     assert len(result.connections) == 3
     assert all(c.target_device == computers[0].name for c in result.connections)
     assert Instrument.model_validate_json(result.model_dump_json()) == result
@@ -137,7 +164,10 @@ def test_saved_settings_refresh_and_invalidate_cache(options, monkeypatch):
     root.find("INFO/MACHINE").set("name", "Saved computer")
     ET.ElementTree(root).write(path)
     result = mapper.map()
-    assert any(isinstance(c, Computer) and c.name == "Saved computer" for c in result.components)
+    assert any(
+        isinstance(c, Computer) and c.name == "Saved computer"
+        for c in result.components
+    )
     path.write_text("<SETTINGS", encoding="utf-8")
     with pytest.raises(ET.ParseError):
         mapper.map()
@@ -185,7 +215,11 @@ def test_invalid_probe(root, options, tmp_path, attribute, value, message):
 
 
 def test_conflicting_duplicate(root, options, tmp_path):
-    quad_entries = [p for p in root.iter("NP_PROBE") if p.get("probe_serial_number") == "23207205101"]
+    quad_entries = [
+        p
+        for p in root.iter("NP_PROBE")
+        if p.get("probe_serial_number") == "23207205101"
+    ]
     quad_entries[-1].set("probe_part_number", "conflicting")
     path = options["data_dir"] / "Record Node 103" / "settings.xml"
     ET.ElementTree(root).write(path)
@@ -208,7 +242,9 @@ def test_two_probes_on_same_port_different_docks(root, options, tmp_path):
     path = options["data_dir"] / "Record Node 103" / "settings.xml"
     ET.ElementTree(root).write(path)
     result = AindInstrumentDataMapper(**options).map()
-    station = next(c for c in result.components if isinstance(c, NeuropixelsBasestation))
+    station = next(
+        c for c in result.components if isinstance(c, NeuropixelsBasestation)
+    )
     assert station.ports[0].probes == ["50198", "50210"]
 
 
@@ -220,7 +256,14 @@ def test_disabled_hardware_is_included(root, options, tmp_path):
     assert len([c for c in result.components if isinstance(c, EphysAssembly)]) == 7
 
 
-@pytest.mark.parametrize("xml", ["<WRONG/>", "<SETTINGS/>", "<SETTINGS><INFO><MACHINE name='pc'/></INFO></SETTINGS>"])
+@pytest.mark.parametrize(
+    "xml",
+    [
+        "<WRONG/>",
+        "<SETTINGS/>",
+        "<SETTINGS><INFO><MACHINE name='pc'/></INFO></SETTINGS>",
+    ],
+)
 def test_missing_xml_structure(xml, options, tmp_path):
     path = options["data_dir"] / "Record Node 103" / "settings.xml"
     path.write_text(xml)
@@ -301,7 +344,9 @@ def test_unrelated_configurations_are_ignored(options):
 
 
 def test_acquisition_probe_names_must_match_xml(options):
-    options["acquisition"].data_streams[0].configurations[0].probes[0].device_name = "Not the XML name"
+    options["acquisition"].data_streams[0].configurations[0].probes[
+        0
+    ].device_name = "Not the XML name"
     with pytest.raises(ValueError, match="No acquisition manipulator association"):
         AindInstrumentDataMapper(**options).map()
 
@@ -332,12 +377,15 @@ def test_acquisition_associations_refresh_and_invalidate_cache(options):
     with pytest.raises(ValueError, match="not yet mapped"):
         mapper.rig_schema()
 
+
 def test_both_mappers_use_saved_dataset(options):
     data_dir = options["data_dir"]
     metadata_dir = data_dir / "Ephys Metadata Generator 101"
     metadata_dir.mkdir()
     stream = options["acquisition"].data_streams[0]
-    (metadata_dir / "ephys_datastream_1_0.json").write_text(stream.model_dump_json(), encoding="utf-8")
+    (metadata_dir / "ephys_datastream_1_0.json").write_text(
+        stream.model_dump_json(), encoding="utf-8"
+    )
     acquisition = AindAcquisitionDataMapper(
         data_dir,
         session=Session(subject="123456", experimenter=["Test Experimenter"]),
@@ -357,4 +405,3 @@ def test_malformed_first_settings_does_not_fall_through(options):
     (node / "settings.xml").write_text("<SETTINGS", encoding="utf-8")
     with pytest.raises(ET.ParseError):
         AindInstrumentDataMapper(**options).map()
-

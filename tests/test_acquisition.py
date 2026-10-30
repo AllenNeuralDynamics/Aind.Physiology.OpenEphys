@@ -7,7 +7,11 @@ from unittest.mock import Mock
 import pytest
 from aind_behavior_services.session import Session
 from aind_data_schema.components.coordinates import CoordinateSystemLibrary
-from aind_data_schema.core.acquisition import Acquisition, AcquisitionSubjectDetails, StimulusEpoch
+from aind_data_schema.core.acquisition import (
+    Acquisition,
+    AcquisitionSubjectDetails,
+    StimulusEpoch,
+)
 from aind_physiology_openephys_data_mappers import AindAcquisitionDataMapper
 from pydantic import ValidationError
 
@@ -17,14 +21,21 @@ def stream(start="2026-10-22T16:00:00Z", end="2026-10-22T16:05:00Z"):
         "object_type": "Data stream",
         "stream_start_time": start,
         "stream_end_time": end,
-        "modalities": [{"name": "Extracellular electrophysiology", "abbreviation": "ecephys"}],
+        "modalities": [
+            {"name": "Extracellular electrophysiology", "abbreviation": "ecephys"}
+        ],
         "active_devices": ["manipulatorA"],
         "configurations": [
             {
                 "object_type": "Manipulator config",
                 "device_name": "manipulatorA",
-                "local_coordinate_system": CoordinateSystemLibrary.MPM_MANIP_RFB.model_dump(mode="json"),
-                "local_axis_positions": {"object_type": "Translation", "translation": [0.0, 0.0, 0.0]},
+                "local_coordinate_system": CoordinateSystemLibrary.MPM_MANIP_RFB.model_dump(
+                    mode="json"
+                ),
+                "local_axis_positions": {
+                    "object_type": "Translation",
+                    "translation": [0.0, 0.0, 0.0],
+                },
             }
         ],
         "connections": [],
@@ -36,7 +47,9 @@ def stream(start="2026-10-22T16:00:00Z", end="2026-10-22T16:05:00Z"):
 def metadata_dir(tmp_path):
     directory = tmp_path / "Ephys Metadata Generator 101"
     directory.mkdir()
-    (directory / "ephys_datastream_1_0.json").write_text(json.dumps(stream()), encoding="utf-8")
+    (directory / "ephys_datastream_1_0.json").write_text(
+        json.dumps(stream()), encoding="utf-8"
+    )
     return directory
 
 
@@ -44,7 +57,10 @@ def metadata_dir(tmp_path):
 def options():
     return {
         "session": Session(
-            subject="123456", experimenter=["Test Experimenter"], session_name="test-session", notes="session notes"
+            subject="123456",
+            experimenter=["Test Experimenter"],
+            session_name="test-session",
+            notes="session notes",
         ),
         "instrument_id": "test-instrument",
         "acquisition_type": "test acquisition",
@@ -65,7 +81,9 @@ def test_lifecycle_before_mapping(mapper):
         mapper.session_schema()
 
 
-def test_mapping_preserves_metadata_and_filename_order(mapper, metadata_dir, monkeypatch):
+def test_mapping_preserves_metadata_and_filename_order(
+    mapper, metadata_dir, monkeypatch
+):
     later = stream("2026-10-22T17:00:00Z", "2026-10-22T17:05:00Z")
     (metadata_dir / "a.JSON").write_text(json.dumps(later), encoding="utf-8-sig")
     (metadata_dir / "notes.txt").write_text("not metadata", encoding="utf-8")
@@ -115,7 +133,9 @@ def test_acquisition_type_defaults_to_empty(metadata_dir, options):
 
 
 @pytest.mark.parametrize("behavior_first", [False, True])
-def test_empty_acquisition_type_inherits_from_behavior(metadata_dir, options, behavior_first):
+def test_empty_acquisition_type_inherits_from_behavior(
+    metadata_dir, options, behavior_first
+):
     options.pop("acquisition_type")
     ephys = AindAcquisitionDataMapper(metadata_dir.parent, **options).map()
     behavior_data = ephys.model_dump()
@@ -140,7 +160,9 @@ def test_subject_details_input_is_rejected(metadata_dir, options):
         AindAcquisitionDataMapper(
             metadata_dir.parent,
             **options,
-            subject_details=AcquisitionSubjectDetails(mouse_platform_name="Running Wheel"),
+            subject_details=AcquisitionSubjectDetails(
+                mouse_platform_name="Running Wheel"
+            ),
         )
 
 
@@ -159,7 +181,9 @@ def test_shared_fields_can_be_omitted_at_construction(metadata_dir, options):
 
 
 @pytest.mark.parametrize("instrument_id", [None, ""])
-def test_missing_instrument_id_is_rejected_during_mapping(metadata_dir, options, instrument_id):
+def test_missing_instrument_id_is_rejected_during_mapping(
+    metadata_dir, options, instrument_id
+):
     options["instrument_id"] = instrument_id
     mapper = AindAcquisitionDataMapper(metadata_dir.parent, **options)
     with pytest.raises(ValidationError, match="instrument_id is required"):
@@ -187,7 +211,9 @@ def test_missing_session_name(mapper):
 @pytest.mark.parametrize("argument", ["app", "processor_id", "metadata_dir"])
 def test_old_source_arguments_are_rejected(metadata_dir, options, argument):
     with pytest.raises(TypeError, match=argument):
-        AindAcquisitionDataMapper(data_dir=metadata_dir.parent, **options, **{argument: metadata_dir})
+        AindAcquisitionDataMapper(
+            data_dir=metadata_dir.parent, **options, **{argument: metadata_dir}
+        )
 
 
 def test_empty_metadata_directory(tmp_path, options):
@@ -217,7 +243,9 @@ def test_invalid_json_file(mapper, metadata_dir, content):
     ],
 )
 def test_invalid_stream_schema(mapper, metadata_dir, metadata):
-    (metadata_dir / "ephys_datastream_1_0.json").write_text(json.dumps(metadata), encoding="utf-8")
+    (metadata_dir / "ephys_datastream_1_0.json").write_text(
+        json.dumps(metadata), encoding="utf-8"
+    )
     with pytest.raises(ValidationError):
         mapper.map()
     assert not mapper.is_mapped()
@@ -225,7 +253,9 @@ def test_invalid_stream_schema(mapper, metadata_dir, metadata):
 
 def test_reversed_time_bounds_are_rejected(mapper, metadata_dir):
     path = metadata_dir / "ephys_datastream_1_0.json"
-    path.write_text(json.dumps(stream(end="1969-12-31T16:00:00-08:00")), encoding="utf-8")
+    path.write_text(
+        json.dumps(stream(end="1969-12-31T16:00:00-08:00")), encoding="utf-8"
+    )
     with pytest.raises(ValueError, match="ends before it starts"):
         mapper.map()
 
@@ -234,9 +264,14 @@ def test_plugin_coordinate_system_field(mapper, metadata_dir):
     metadata = stream()
     config = metadata["configurations"][0]
     config["coordinate_system"] = config.pop("local_coordinate_system")
-    (metadata_dir / "ephys_datastream_1_0.json").write_text(json.dumps(metadata), encoding="utf-8")
+    (metadata_dir / "ephys_datastream_1_0.json").write_text(
+        json.dumps(metadata), encoding="utf-8"
+    )
     result = mapper.map()
-    assert result.data_streams[0].configurations[0].local_coordinate_system == CoordinateSystemLibrary.MPM_MANIP_RFB
+    assert (
+        result.data_streams[0].configurations[0].local_coordinate_system
+        == CoordinateSystemLibrary.MPM_MANIP_RFB
+    )
 
 
 def test_directory_refresh_and_cache_invalidation(mapper, metadata_dir):
