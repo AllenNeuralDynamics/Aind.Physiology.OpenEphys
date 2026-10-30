@@ -5,7 +5,6 @@ testpaths = [
     "src/packages/aind_physiology_openephys/tests",
     "src/packages/aind_physiology_openephys_data_mappers/tests",
 ]
-pythonpath = ["src"]
 
 [tool.uv.workspace]
 members = [

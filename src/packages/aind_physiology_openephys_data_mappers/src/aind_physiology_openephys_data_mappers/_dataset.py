@@ -10,9 +10,7 @@ def _node_directories(data_dir: Path, prefix: str) -> list[Path]:
     if not data_dir.is_dir():
         raise NotADirectoryError(f"Open Ephys data path is not a directory: {data_dir}")
     return sorted(
-        path
-        for path in data_dir.iterdir()
-        if path.is_dir() and re.fullmatch(rf"{re.escape(prefix)} \d+", path.name)
+        path for path in data_dir.iterdir() if path.is_dir() and re.fullmatch(rf"{re.escape(prefix)} \d+", path.name)
     )
 
 

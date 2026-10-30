@@ -26,7 +26,7 @@ A repository with a deployable version of the Open Ephys GUI, plus the Python pa
 
 ## Acquisition metadata
 
-`src/data_mappers/_acquisition.py` provides `AindAcquisitionDataMapper`, following
+The `aind_physiology_openephys_data_mappers` package provides `AindAcquisitionDataMapper`, following
 the session-mapper method interface used by VrForaging without depending on
 CLABE. Both mappers read only previously saved datasets; they never contact a
 running Open Ephys application.
@@ -55,7 +55,7 @@ from pathlib import Path
 from aind_behavior_services.session import Session
 from aind_data_schema.components.coordinates import CoordinateSystemLibrary
 
-from src.data_mappers import AindAcquisitionDataMapper
+from aind_physiology_openephys_data_mappers import AindAcquisitionDataMapper
 
 session = Session.model_validate_json(Path("session.json").read_text(encoding="utf-8"))
 data_dir = Path(r"C:\Users\joshs\Documents\Open Ephys\2026-10-23_14-43-15")
@@ -73,7 +73,7 @@ acquisition.write_standard_file(prefix="ephys")
 
 ## Instrument metadata
 
-`src/data_mappers/_instrument.py` provides `AindInstrumentDataMapper`, using the
+The same package provides `AindInstrumentDataMapper`, using the
 same `map()`/`run()`, `mapped`, `is_mapped()`, and `rig_schema()` method interface
 as the VrForaging instrument mapper.
 
@@ -99,7 +99,7 @@ from pathlib import Path
 
 from aind_data_schema.components.coordinates import CoordinateSystemLibrary
 from aind_data_schema.core.acquisition import Acquisition
-from src.data_mappers import AindInstrumentDataMapper
+from aind_physiology_openephys_data_mappers import AindInstrumentDataMapper
 
 # Or reuse the Acquisition returned by AindAcquisitionDataMapper.map().
 acquisition = Acquisition.model_validate_json(

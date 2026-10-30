@@ -8,9 +8,8 @@ import pytest
 from aind_behavior_services.session import Session
 from aind_data_schema.components.coordinates import CoordinateSystemLibrary
 from aind_data_schema.core.acquisition import Acquisition, AcquisitionSubjectDetails, StimulusEpoch
+from aind_physiology_openephys_data_mappers import AindAcquisitionDataMapper
 from pydantic import ValidationError
-
-from data_mappers import AindAcquisitionDataMapper
 
 
 def stream(start="2026-10-22T16:00:00Z", end="2026-10-22T16:05:00Z"):

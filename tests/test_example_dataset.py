@@ -18,10 +18,9 @@ from aind_data_schema.components.devices import Computer, EphysAssembly, Neuropi
 from aind_data_schema.core.acquisition import Acquisition, DataStream
 from aind_data_schema.core.instrument import Instrument
 from aind_data_schema_models.devices import ProbeModel
+from aind_physiology_openephys_data_mappers import AindAcquisitionDataMapper, AindInstrumentDataMapper
+from aind_physiology_openephys_data_mappers._dataset import find_settings_xml
 from pydantic import ValidationError
-
-from data_mappers import AindAcquisitionDataMapper, AindInstrumentDataMapper
-from data_mappers._dataset import find_settings_xml
 
 EXAMPLE = Path(__file__).parent / "example_data_directory"
 METADATA = "Ephys Metadata Generator 101"

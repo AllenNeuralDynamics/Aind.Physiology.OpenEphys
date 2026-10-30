@@ -13,8 +13,7 @@ from aind_data_schema.core.acquisition import Acquisition, AcquisitionSubjectDet
 from aind_data_schema.core.instrument import Instrument
 from aind_data_schema_models.devices import ProbeModel
 from aind_data_schema_models.organizations import Organization
-
-from data_mappers import AindAcquisitionDataMapper, AindInstrumentDataMapper
+from aind_physiology_openephys_data_mappers import AindAcquisitionDataMapper, AindInstrumentDataMapper
 
 EXAMPLE = Path(__file__).parents[1] / "src" / "example.xml"
 

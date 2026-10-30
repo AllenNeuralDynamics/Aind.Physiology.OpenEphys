@@ -3,8 +3,7 @@
 from xml.etree import ElementTree as ET
 
 import pytest
-
-from data_mappers._instrument import _stream_probe_names
+from aind_physiology_openephys_data_mappers._instrument import _stream_probe_names
 
 
 def processor(models, stream_names):

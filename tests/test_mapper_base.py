@@ -6,8 +6,7 @@ from pathlib import Path
 from textwrap import dedent
 
 import pytest
-
-from data_mappers._base import DataMapper
+from aind_physiology_openephys_data_mappers._base import DataMapper
 
 
 class ExampleMapper(DataMapper[list[int]]):
@@ -74,7 +73,6 @@ def test_real_mappers_run_without_clabe():
                     raise AssertionError(f"Unexpected CLABE import: {fullname}")
 
         sys.meta_path.insert(0, BlockClabe())
-        sys.path.insert(0, "src")
 
         import pytest
 
