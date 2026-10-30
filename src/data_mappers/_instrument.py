@@ -22,8 +22,8 @@ from aind_data_schema.core.instrument import Instrument
 from aind_data_schema_models.devices import ProbeModel
 from aind_data_schema_models.modalities import Modality
 from aind_data_schema_models.organizations import Organization
-from clabe.data_mapper import aind_data_schema as ads
 
+from ._base import DataMapper
 from ._dataset import find_settings_xml
 
 logger = logging.getLogger(__name__)
@@ -57,7 +57,7 @@ def _positive_int(element: ET.Element, attribute: str) -> int:
     return value
 
 
-class AindInstrumentDataMapper(ads.AindDataSchemaRigDataMapper):
+class AindInstrumentDataMapper(DataMapper[Instrument]):
     """Build ephys hardware metadata from a saved Open Ephys dataset.
 
     Read the first settings.xml in sorted ``Record Node XXX`` directories

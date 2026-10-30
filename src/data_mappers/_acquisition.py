@@ -8,28 +8,32 @@ from typing import Any
 from aind_behavior_services.session import Session
 from aind_data_schema.components.coordinates import CoordinateSystem
 from aind_data_schema.core import acquisition
-from clabe.data_mapper import aind_data_schema as ads
 from pydantic import AwareDatetime, TypeAdapter
 
+from ._base import DataMapper
 from ._dataset import find_metadata_directory
 
 logger = logging.getLogger(__name__)
 
 
-class AindAcquisitionDataMapper(ads.AindDataSchemaSessionDataMapper):
+class AindAcquisitionDataMapper(DataMapper[acquisition.Acquisition]):
     """Read completed metadata from a saved Open Ephys dataset.
 
     ``data_dir`` must contain one ``Ephys Metadata Generator XXX`` directory.
     Mapping reads one DataStream object per JSON file in that directory, in
     filename order. It never contacts the GUI or modifies the dataset.
     Write the returned Acquisition explicitly with ``write_standard_file``.
+    Subject details are left unset for the behavior acquisition to provide
+    when the acquisitions are merged.
 
     Args:
         data_dir: Saved Open Ephys dataset root, not a processor subdirectory.
         session: Shared experimental session (subject, experimenters, and name).
-        instrument_id: Identifier of the recording instrument.
-        acquisition_type: Description of the experiment/acquisition.
-        subject_details: Subject setup, such as the mouse platform.
+        instrument_id: Identifier of the recording instrument. Defaults to None;
+            supply the shared behavior instrument ID before mapping, since the
+            acquisition schema requires it for Open Ephys data streams.
+        acquisition_type: Description of the experiment/acquisition. Defaults to
+            an empty string so merging can use the behavior acquisition's type.
         ethics_review_id: Applicable ethics review identifiers, if available.
         coordinate_system: Acquisition-level coordinate system, if known.
         stimulus_epochs: Optional stimulus metadata supplied by the experiment.
@@ -40,9 +44,8 @@ class AindAcquisitionDataMapper(ads.AindDataSchemaSessionDataMapper):
         data_dir: str | Path,
         session: Session,
         *,
-        instrument_id: str,
-        acquisition_type: str,
-        subject_details: acquisition.AcquisitionSubjectDetails,
+        instrument_id: str | None = None,
+        acquisition_type: str = "",
         ethics_review_id: list[str] | None = None,
         coordinate_system: CoordinateSystem | None = None,
         stimulus_epochs: list[acquisition.StimulusEpoch] | None = None,
@@ -51,7 +54,6 @@ class AindAcquisitionDataMapper(ads.AindDataSchemaSessionDataMapper):
         self.session_model = session
         self.instrument_id = instrument_id
         self.acquisition_type = acquisition_type
-        self.subject_details = subject_details
         self.ethics_review_id = ethics_review_id
         self.coordinate_system = coordinate_system
         self.stimulus_epochs = list(stimulus_epochs) if stimulus_epochs is not None else []
@@ -87,7 +89,6 @@ class AindAcquisitionDataMapper(ads.AindDataSchemaSessionDataMapper):
             acquisition_type=self.acquisition_type,
             instrument_id=self.instrument_id,
             ethics_review_id=self.ethics_review_id,
-            subject_details=self.subject_details,
             coordinate_system=self.coordinate_system,
             stimulus_epochs=self.stimulus_epochs,
             data_streams=streams,

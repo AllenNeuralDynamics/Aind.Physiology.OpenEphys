@@ -27,18 +27,33 @@ A repository with a deployable version of the Open Ephys GUI, plus the Python pa
 ## Acquisition metadata
 
 `src/data_mappers/_acquisition.py` provides `AindAcquisitionDataMapper`, following
-the CLABE session-mapper interface used by VrForaging. Both mappers read only
-previously saved datasets; they never contact a running Open Ephys application.
+the session-mapper method interface used by VrForaging without depending on
+CLABE. Both mappers read only previously saved datasets; they never contact a
+running Open Ephys application.
 
 Pass the dataset root as `data_dir`, not an individual processor directory or
 XML path. Other experimental/session metadata remains caller-supplied.
+
+`acquisition_type` defaults to `""`, allowing the behavior acquisition's type
+to be used when the acquisitions are merged. `instrument_id` defaults to
+`None` at construction, but the acquisition schema requires a nonempty ID for
+Open Ephys data streams. Supply the shared behavior instrument ID either in
+the constructor or by setting `mapper.instrument_id` before calling `map()`.
+An empty or missing instrument ID is rejected during mapping, not deferred
+until merge.
+
+The ephys mapper does not accept `subject_details`; it leaves that field as
+`None` so merging retains the subject details supplied by the behavior component.
+
+Both mappers provide `map()`, `run()`, `mapped`, and `is_mapped()`. They do not
+inherit from CLABE services or apply CLABE notifications, activity indicators,
+or tracing; the coordinating application can wrap execution if needed.
 
 ```python
 from pathlib import Path
 
 from aind_behavior_services.session import Session
 from aind_data_schema.components.coordinates import CoordinateSystemLibrary
-from aind_data_schema.core.acquisition import AcquisitionSubjectDetails
 
 from src.data_mappers import AindAcquisitionDataMapper
 
@@ -49,7 +64,6 @@ mapper = AindAcquisitionDataMapper(
     session=session,
     instrument_id="EPHYS1",  # Replace with the actual instrument.
     acquisition_type="Receptive field mapping",
-    subject_details=AcquisitionSubjectDetails(mouse_platform_name="Running Wheel"),
     coordinate_system=CoordinateSystemLibrary.BREGMA_RAS,  # Only if applicable.
     ethics_review_id=["2109"],  # Replace with applicable review identifiers.
 )
@@ -60,7 +74,7 @@ acquisition.write_standard_file(prefix="ephys")
 ## Instrument metadata
 
 `src/data_mappers/_instrument.py` provides `AindInstrumentDataMapper`, using the
-same CLABE `map()`/`run()`, `mapped`, `is_mapped()`, and `rig_schema()` contract
+same `map()`/`run()`, `mapped`, `is_mapped()`, and `rig_schema()` method interface
 as the VrForaging instrument mapper.
 
 Pass the same dataset root as `data_dir`. The mapper checks immediate
