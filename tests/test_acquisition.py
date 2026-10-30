@@ -238,7 +238,6 @@ def test_invalid_json_file(mapper, metadata_dir, content):
         {},
         stream(end=None),
         stream(end="not a datetime"),
-        stream(end="2026-10-22T16:05:00"),
         {**stream(), "configurations": []},
     ],
 )
@@ -249,6 +248,20 @@ def test_invalid_stream_schema(mapper, metadata_dir, metadata):
     with pytest.raises(ValidationError):
         mapper.map()
     assert not mapper.is_mapped()
+
+
+def test_naive_timestamps_use_schema_timezone(mapper, metadata_dir):
+    (metadata_dir / "ephys_datastream_1_0.json").write_text(
+        json.dumps(stream(start="2026-10-22T16:00:00", end="2026-10-22T16:05:00")),
+        encoding="utf-8",
+    )
+
+    result = mapper.map()
+
+    assert result.acquisition_start_time.replace(tzinfo=None) == datetime(2026, 10, 22, 16)
+    assert result.acquisition_end_time.replace(tzinfo=None) == datetime(2026, 10, 22, 16, 5)
+    assert result.acquisition_start_time.utcoffset() is not None
+    assert result.acquisition_end_time.utcoffset() is not None
 
 
 def test_reversed_time_bounds_are_rejected(mapper, metadata_dir):

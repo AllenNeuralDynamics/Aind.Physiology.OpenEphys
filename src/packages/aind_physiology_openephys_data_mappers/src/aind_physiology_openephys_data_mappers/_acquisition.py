@@ -8,7 +8,6 @@ from typing import Any
 from aind_behavior_services.session import Session
 from aind_data_schema.components.coordinates import CoordinateSystem
 from aind_data_schema.core import acquisition
-from pydantic import AwareDatetime, TypeAdapter
 
 from ._base import DataMapper
 from ._dataset import find_metadata_directory
@@ -96,11 +95,6 @@ class AindAcquisitionDataMapper(DataMapper[acquisition.Acquisition]):
 
     def _get_data_streams(self) -> list[acquisition.DataStream]:
         metadata = self._read_metadata_directory()
-        # Validate the wire timestamps before the schema can infer a timezone.
-        timestamp = TypeAdapter(AwareDatetime)
-        for item in metadata:
-            timestamp.validate_python(item.get("stream_start_time"))
-            timestamp.validate_python(item.get("stream_end_time"))
         streams = [acquisition.DataStream.model_validate(item) for item in metadata]
         for index, stream in enumerate(streams):
             if stream.stream_end_time < stream.stream_start_time:
