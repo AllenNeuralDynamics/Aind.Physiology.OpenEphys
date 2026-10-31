@@ -1,6 +1,7 @@
 [tool.pytest.ini_options]
 addopts = "--import-mode=importlib"
 testpaths = [
+    "tests",
     "src/packages/aind_physiology_openephys/tests",
     "src/packages/aind_physiology_openephys_data_mappers/tests",
 ]
@@ -25,7 +26,7 @@ dev = [
 ]
 
 [tool.codespell]
-skip = '.git,*.pdf,*.svg,uv.lock'
+skip = '.git,*.pdf,*.svg,uv.lock,example_data_directory'
 ignore-words-list = 'nd'
 
 [tool.uv]
