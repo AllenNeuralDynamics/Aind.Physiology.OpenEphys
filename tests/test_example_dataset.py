@@ -249,15 +249,40 @@ def test_later_snapshot_is_not_selected(dataset):
         find_settings_xml(dataset)
 
 
+def test_recorded_fixture_accepts_naive_timestamps(dataset):
+    mapper = acquisition_mapper(dataset)
+    first = mapper.run()
+    expected = []
+    for path in sorted((dataset / METADATA).glob("*.json")):
+        metadata = json.loads(path.read_text(encoding="utf-8"))
+        # Both bounds use local time, avoiding mixed explicit and inferred offsets.
+        for field in ("stream_start_time", "stream_end_time"):
+            metadata[field] = (
+                datetime.fromisoformat(metadata[field]).replace(tzinfo=None).isoformat()
+            )
+        path.write_text(json.dumps(metadata), encoding="utf-8")
+        expected.append(DataStream.model_validate(metadata))
+
+    result = mapper.run()
+
+    assert result is not first
+    assert mapper.mapped is result
+    assert result.data_streams == expected
+    assert result.acquisition_start_time == min(
+        stream.stream_start_time for stream in expected
+    )
+    assert result.acquisition_end_time == max(
+        stream.stream_end_time for stream in expected
+    )
+
+
 @pytest.mark.parametrize("field", ["stream_start_time", "stream_end_time"])
-def test_recorded_fixture_rejects_naive_timestamps_and_clears_cache(dataset, field):
+def test_recorded_fixture_rejects_invalid_timestamps_and_clears_cache(dataset, field):
     mapper = acquisition_mapper(dataset)
     mapper.run()
     path = dataset / METADATA / "ephys_datastream_1_0.json"
     metadata = json.loads(path.read_text(encoding="utf-8"))
-    metadata[field] = (
-        datetime.fromisoformat(metadata[field]).replace(tzinfo=None).isoformat()
-    )
+    metadata[field] = "not a datetime"
     path.write_text(json.dumps(metadata), encoding="utf-8")
     with pytest.raises(ValidationError):
         mapper.run()
