@@ -28,9 +28,8 @@ class AindAcquisitionDataMapper(DataMapper[acquisition.Acquisition]):
     Args:
         data_dir: Saved Open Ephys dataset root, not a processor subdirectory.
         session: Shared experimental session (subject, experimenters, and name).
-        instrument_id: Identifier of the recording instrument. Defaults to None;
-            supply the shared behavior instrument ID before mapping, since the
-            acquisition schema requires it for Open Ephys data streams.
+        instrument_id: Required identifier of the recording instrument. The
+            orchestrator must supply the same ID for behavior and ephys metadata.
         acquisition_type: Description of the experiment/acquisition. Defaults to
             an empty string so merging can use the behavior acquisition's type.
         ethics_review_id: Applicable ethics review identifiers, if available.
@@ -42,8 +41,8 @@ class AindAcquisitionDataMapper(DataMapper[acquisition.Acquisition]):
         self,
         data_dir: str | Path,
         session: Session,
+        instrument_id: str,
         *,
-        instrument_id: str | None = None,
         acquisition_type: str = "",
         ethics_review_id: list[str] | None = None,
         coordinate_system: CoordinateSystem | None = None,

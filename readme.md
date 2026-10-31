@@ -35,12 +35,10 @@ Pass the dataset root as `data_dir`, not an individual processor directory or
 XML path. Other experimental/session metadata remains caller-supplied.
 
 `acquisition_type` defaults to `""`, allowing the behavior acquisition's type
-to be used when the acquisitions are merged. `instrument_id` defaults to
-`None` at construction, but the acquisition schema requires a nonempty ID for
-Open Ephys data streams. Supply the shared behavior instrument ID either in
-the constructor or by setting `mapper.instrument_id` before calling `map()`.
-An empty or missing instrument ID is rejected during mapping, not deferred
-until merge.
+to be used when the acquisitions are merged. `instrument_id` is a required
+constructor argument, accepted positionally after `session`. The orchestrator
+must supply the same instrument ID for behavior and ephys metadata before merging.
+The acquisition schema rejects empty or null IDs during mapping.
 
 The ephys mapper does not accept `subject_details`; it leaves that field as
 `None` so merging retains the subject details supplied by the behavior component.
@@ -60,9 +58,9 @@ from aind_physiology_openephys_data_mappers import AindAcquisitionDataMapper
 session = Session.model_validate_json(Path("session.json").read_text(encoding="utf-8"))
 data_dir = Path(r"C:\Users\joshs\Documents\Open Ephys\2026-10-23_14-43-15")
 mapper = AindAcquisitionDataMapper(
-    data_dir=data_dir,
-    session=session,
-    instrument_id="EPHYS1",  # Replace with the actual instrument.
+    data_dir,
+    session,
+    "EPHYS1",  # Shared instrument ID supplied by the orchestrator.
     acquisition_type="Receptive field mapping",
     coordinate_system=CoordinateSystemLibrary.BREGMA_RAS,  # Only if applicable.
     ethics_review_id=["2109"],  # Replace with applicable review identifiers.

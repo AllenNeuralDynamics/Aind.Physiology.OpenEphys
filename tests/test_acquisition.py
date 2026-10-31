@@ -166,17 +166,24 @@ def test_subject_details_input_is_rejected(metadata_dir, options):
         )
 
 
-def test_shared_fields_can_be_omitted_at_construction(metadata_dir, options):
+def test_instrument_id_is_required_at_construction(metadata_dir, options):
     options.pop("instrument_id")
+    with pytest.raises(TypeError, match="instrument_id"):
+        AindAcquisitionDataMapper(metadata_dir.parent, **options)
+
+
+def test_instrument_id_can_be_supplied_positionally(metadata_dir, options):
+    session = options.pop("session")
+    instrument_id = options.pop("instrument_id")
     options.pop("acquisition_type")
-    mapper = AindAcquisitionDataMapper(metadata_dir.parent, **options)
-    assert mapper.instrument_id is None
+    mapper = AindAcquisitionDataMapper(
+        metadata_dir.parent, session, instrument_id, **options
+    )
+    assert mapper.instrument_id == instrument_id
     assert mapper.acquisition_type == ""
 
-    # The behavior instrument ID must be supplied before validating ephys streams.
-    mapper.instrument_id = "behavior-instrument"
     result = mapper.map()
-    assert result.instrument_id == "behavior-instrument"
+    assert result.instrument_id == instrument_id
     assert result.acquisition_type == ""
 
 
