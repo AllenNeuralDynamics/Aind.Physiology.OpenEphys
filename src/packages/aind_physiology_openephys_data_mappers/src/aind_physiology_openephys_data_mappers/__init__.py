@@ -5,6 +5,9 @@ from pathlib import Path
 from pydantic import Field
 from pydantic_settings import BaseSettings, CliApp
 
+from ._acquisition import AindAcquisitionDataMapper
+from ._instrument import AindInstrumentDataMapper
+
 logger = logging.getLogger(__name__)
 
 
@@ -21,4 +24,4 @@ def main() -> None:
     CliApp().run(DataMapperCli)
 
 
-__all__ = ["DataMapperCli", "main"]
+__all__ = ["AindAcquisitionDataMapper", "AindInstrumentDataMapper", "DataMapperCli", "main"]
