@@ -1,6 +1,6 @@
 param([switch]$NoLaunch)
 Push-Location $PSScriptRoot
-$version = "1.0.1"
+$version = "1.1.0"
 if (!(Test-Path "./open-ephys.exe")) {
     $release = "https://github.com/open-ephys/plugin-GUI/releases/download/v${version}/open-ephys-v${version}-windows.zip"
     Write-Host "Downloading Open Ephys GUI v${version} from $release"
