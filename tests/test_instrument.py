@@ -7,6 +7,7 @@ from xml.etree import ElementTree as ET
 
 import pytest
 from aind_behavior_services.session import Session
+from aind_data_schema.components.configs import ManipulatorConfig
 from aind_data_schema.components.coordinates import CoordinateSystemLibrary
 from aind_data_schema.components.devices import (
     Computer,
@@ -27,6 +28,12 @@ from aind_physiology_openephys_data_mappers import (
 )
 
 EXAMPLE = Path(__file__).parents[1] / "src" / "example.xml"
+# aind-data-schema 2.9 renamed the configurations' coordinate_system to local_coordinate_system
+LOCAL_CS = (
+    "local_coordinate_system"
+    if "local_coordinate_system" in ManipulatorConfig.model_fields
+    else "coordinate_system"
+)
 
 
 @pytest.fixture
@@ -49,7 +56,7 @@ def assembly_config(probe_name):
         "device_name": f"Recorded assembly {probe_name}",
         "manipulator": {
             "device_name": f"Manipulator {probe_name}",
-            "local_coordinate_system": coordinate_system,
+            LOCAL_CS: coordinate_system,
             "local_axis_positions": {
                 "object_type": "Translation",
                 "translation": [0.0, 0.0, 0.0],
@@ -64,7 +71,7 @@ def assembly_config(probe_name):
                     "acronym": "root",
                     "id": "997",
                 },
-                "local_coordinate_system": coordinate_system,
+                LOCAL_CS: coordinate_system,
                 "transform": [
                     {"object_type": "Translation", "translation": [0.0, 0.0, 0.0]}
                 ],

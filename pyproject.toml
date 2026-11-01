@@ -21,6 +21,7 @@ dev = [
     "ruff",
     "codespell",
     "pytest",
+    "pytest-asyncio",
     "pytest-cov",
     "aind-physiology-openephys-data-mappers",
 ]

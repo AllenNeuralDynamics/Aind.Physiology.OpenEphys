@@ -17,7 +17,11 @@ classifiers = [
 version = "0.1.0"
 readme = {file = "README.md", content-type = "text/markdown"}
 
-dependencies = []
+dependencies = [
+    "aind-behavior-services>=0.13.9",
+    "aind-clabe>=0.15.1",
+    "pydantic",
+]
 
 [project.urls]
 Repository = "https://github.com/AllenNeuralDynamics/Aind.Physiology.OpenEphys/"

@@ -12,7 +12,7 @@ from xml.etree import ElementTree as ET
 
 import pytest
 from aind_behavior_services.session import Session
-from aind_data_schema.components.configs import EphysAssemblyConfig
+from aind_data_schema.components.configs import EphysAssemblyConfig, ManipulatorConfig
 from aind_data_schema.components.coordinates import CoordinateSystemLibrary
 from aind_data_schema.components.devices import (
     Computer,
@@ -28,6 +28,13 @@ from aind_physiology_openephys_data_mappers import (
 )
 from aind_physiology_openephys_data_mappers._dataset import find_settings_xml
 from pydantic import ValidationError
+
+# aind-data-schema 2.9 renamed the configurations' coordinate_system to local_coordinate_system
+LOCAL_CS = (
+    "local_coordinate_system"
+    if "local_coordinate_system" in ManipulatorConfig.model_fields
+    else "coordinate_system"
+)
 
 EXAMPLE = Path(__file__).parent / "example_data_directory"
 METADATA = "Ephys Metadata Generator 101"
@@ -95,7 +102,7 @@ def test_recorded_stream_schema_compatibility(filename):
     assert DataStream.model_validate_json(stream.model_dump_json()) == stream
     for config in stream.configurations:
         assert (
-            config.manipulator.local_coordinate_system
+            getattr(config.manipulator, LOCAL_CS)
             == CoordinateSystemLibrary.MPM_MANIP_RFB
         )
         assert config.probes[0].dye == "CM-DiI"
