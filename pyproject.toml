@@ -15,8 +15,6 @@ members = [
 [tool.uv.sources]
 aind-physiology-openephys = { workspace = true }
 aind-physiology-openephys-data-mappers = { workspace = true }
-# TODO: unreleased RemoteRepository.mkdir/write_file; switch to a release once published
-aind-clabe = { git = "https://github.com/AllenNeuralDynamics/clabe", branch = "open-ephys-remote-rig" }
 
 [dependency-groups]
 dev = [

@@ -6,6 +6,7 @@ from unittest.mock import Mock
 
 import pytest
 from aind_behavior_services.session import Session
+from aind_data_schema.components.configs import ManipulatorConfig
 from aind_data_schema.components.coordinates import CoordinateSystemLibrary
 from aind_data_schema.core.acquisition import (
     Acquisition,
@@ -14,6 +15,13 @@ from aind_data_schema.core.acquisition import (
 )
 from aind_physiology_openephys_data_mappers import AindAcquisitionDataMapper
 from pydantic import ValidationError
+
+# aind-data-schema 2.9 renamed the configurations' coordinate_system to local_coordinate_system
+LOCAL_CS = (
+    "local_coordinate_system"
+    if "local_coordinate_system" in ManipulatorConfig.model_fields
+    else "coordinate_system"
+)
 
 
 def stream(start="2026-10-22T16:00:00Z", end="2026-10-22T16:05:00Z"):
@@ -29,9 +37,7 @@ def stream(start="2026-10-22T16:00:00Z", end="2026-10-22T16:05:00Z"):
             {
                 "object_type": "Manipulator config",
                 "device_name": "manipulatorA",
-                "local_coordinate_system": CoordinateSystemLibrary.MPM_MANIP_RFB.model_dump(
-                    mode="json"
-                ),
+                LOCAL_CS: CoordinateSystemLibrary.MPM_MANIP_RFB.model_dump(mode="json"),
                 "local_axis_positions": {
                     "object_type": "Translation",
                     "translation": [0.0, 0.0, 0.0],
@@ -132,6 +138,10 @@ def test_acquisition_type_defaults_to_empty(metadata_dir, options):
     assert mapper.map().acquisition_type == ""
 
 
+@pytest.mark.skipif(
+    "global_coordinate_system" not in Acquisition.model_fields,
+    reason="merging only fills an empty acquisition_type from aind-data-schema 2.9",
+)
 @pytest.mark.parametrize("behavior_first", [False, True])
 def test_empty_acquisition_type_inherits_from_behavior(
     metadata_dir, options, behavior_first
@@ -281,6 +291,10 @@ def test_reversed_time_bounds_are_rejected(mapper, metadata_dir):
         mapper.map()
 
 
+@pytest.mark.skipif(
+    LOCAL_CS == "coordinate_system",
+    reason="the field is only renamed from aind-data-schema 2.9",
+)
 def test_plugin_coordinate_system_field(mapper, metadata_dir):
     metadata = stream()
     config = metadata["configurations"][0]

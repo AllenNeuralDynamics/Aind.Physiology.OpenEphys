@@ -4,7 +4,7 @@ import json
 import shutil
 from datetime import UTC, datetime
 from pathlib import Path, PureWindowsPath
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 from aind_behavior_services.session import Session
@@ -15,7 +15,8 @@ from aind_physiology_openephys_data_mappers import (
     AindInstrumentDataMapper,
     DataMapperCli,
 )
-from clabe.apps.open_ephys import Status, _OpenEphysGuiClient
+from clabe.apps.open_ephys import OpenEphysApp, Status, _OpenEphysGuiClient
+from clabe.utils import get_computer_name
 from clabe.xml_rpc import RemoteRepository
 
 EXAMPLE = Path(__file__).parent / "example_data_directory"
@@ -31,10 +32,13 @@ def no_http():
 
 
 def _rig(
-    data_directory: Path, signal_chain: Path = Path("x.xml")
+    data_directory: Path,
+    signal_chain: Path = Path("x.xml"),
+    computer_name: str | None = None,
 ) -> AindPhysioOpenEphysRig:
     return AindPhysioOpenEphysRig(
-        computer_name="EPHYS-PC",
+        computer_name=computer_name
+        or get_computer_name(),  # this computer, unless testing a remote one
         rig_name="EPHYS1",
         data_directory=data_directory,
         signal_chain=signal_chain,
@@ -117,6 +121,55 @@ def test_acquiring_saves_nothing(tmp_path):
 async def test_launch_rejects_other_executors(tmp_path):
     with pytest.raises(TypeError, match="RemoteRepository"):
         await _app(tmp_path).launch(executor=Mock())
+
+
+@pytest.fixture
+def gui_launch(monkeypatch):
+    """Stands in for starting the GUI and configuring its recording directory."""
+    launch = AsyncMock()
+    monkeypatch.setattr(OpenEphysApp, "launch", launch)
+    monkeypatch.setattr(OpenEphysApp, "set_recording_directory", Mock())
+    return launch
+
+
+@pytest.mark.asyncio
+async def test_launch_runs_here_when_the_rig_is_this_computer(
+    tmp_path, gui_launch, monkeypatch
+):
+    connect = Mock(side_effect=AssertionError("no server needed for this computer"))
+    monkeypatch.setattr(RemoteRepository, "from_computer_name", connect)
+    app = _app(tmp_path)
+
+    await app.launch()
+
+    assert gui_launch.await_args.args[0] is None, "launched with the local executor"
+    assert Path(app.gui_session_directory).is_dir()
+    assert app.session_directory == Path(app.gui_session_directory)
+
+
+@pytest.mark.asyncio
+async def test_launch_follows_the_rig_to_another_computer(
+    tmp_path, gui_launch, monkeypatch
+):
+    remote = Mock(spec=RemoteRepository)
+    connect = Mock(return_value=remote)
+    monkeypatch.setattr(RemoteRepository, "from_computer_name", connect)
+    app = AindBehaviorServicesOpenEphysApp(
+        _rig(tmp_path / "data", computer_name="EPHYS-PC"),
+        _session(),
+        skip_validation=True,
+    )
+
+    await app.launch()
+
+    connect.assert_called_once_with("EPHYS-PC")
+    remote.ensure_running.assert_called_once_with()
+    remote.verify.assert_called_once_with()
+    assert gui_launch.await_args.args[0] is remote
+    remote.mkdir.assert_called_once_with(app.gui_session_directory)
+    assert not Path(app.gui_session_directory).exists(), (
+        "nothing created on this computer"
+    )
 
 
 def test_remote_gui_files_go_through_the_repository(tmp_path):

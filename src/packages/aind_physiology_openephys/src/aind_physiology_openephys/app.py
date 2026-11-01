@@ -6,6 +6,7 @@ from pathlib import Path, PureWindowsPath
 
 from aind_behavior_services.session import Session
 from clabe.apps.open_ephys import OpenEphysApp, OpenEphysAppSettings, Status, _OpenEphysGuiClient
+from clabe.utils import is_this_computer
 from clabe.xml_rpc import RemoteRepository
 
 from .rig import AindPhysioOpenEphysRig
@@ -19,12 +20,12 @@ class AindBehaviorServicesOpenEphysApp(OpenEphysApp):
     The counterpart of clabe's ``AindBehaviorServicesBonsaiApp``. It records the session to
     ``<rig.data_directory>/<session name>/ecephys``, and saves the rig and session to ``ecephys/Logs`` once recording
     starts, so the recording can later be mapped from its files alone (see :meth:`read_rig` and :meth:`read_session`).
-    It works the same whether the GUI runs on this machine or, through a ``RemoteRepository``, on another one.
+    The GUI runs on the computer the rig names, this one or another, and the app works the same either way.
 
     Example:
         ```python
         app = AindBehaviorServicesOpenEphysApp(rig, session)
-        await app.launch(executor=remote)  # or no executor to run it on this machine
+        await app.launch()  # here or on rig.computer_name
         try:
             app.start()
             await behavior_app.run_async()
@@ -122,8 +123,12 @@ class AindBehaviorServicesOpenEphysApp(OpenEphysApp):
     ) -> _OpenEphysGuiClient:
         """Creates the session directory, starts the GUI, and points it at :attr:`gui_recording_directory`.
 
+        Without an ``executor``, the GUI runs on the computer the rig names: here if ``rig.computer_name`` is this
+        computer, otherwise through the clabe XML-RPC server on that computer, which is started if needed and must run
+        from a checkout of the same commit.
+
         Args:
-            executor: The repository on the machine to run the GUI on, or None to run it on this machine.
+            executor: The repository to run the GUI on, instead of the one the rig names.
             timeout: Seconds to wait for the GUI's API to respond after starting it.
             poll_interval: Seconds between attempts to reach the API.
 
@@ -131,7 +136,11 @@ class AindBehaviorServicesOpenEphysApp(OpenEphysApp):
             The client connected to the running GUI.
         """
         if executor is not None and not isinstance(executor, RemoteRepository):
-            raise TypeError(f"Expected a RemoteRepository, or None to run locally, not {type(executor).__name__}")
+            raise TypeError(f"Expected a RemoteRepository, or None to follow the rig, not {type(executor).__name__}")
+        if executor is None and not is_this_computer(self.rig.computer_name):
+            executor = RemoteRepository.from_computer_name(self.rig.computer_name)
+            executor.ensure_running()
+            executor.verify()
         self._remote = executor
         # The GUI ignores a recording directory whose parent does not exist
         self._mkdir(self.gui_session_directory)

@@ -278,7 +278,7 @@ class AindInstrumentDataMapper(ads.AindDataSchemaRigDataMapper):
             instrument_id=self.instrument_id,
             location=self.location,
             modification_date=self.modification_date,
-            global_coordinate_system=self.coordinate_system,
+            coordinate_system=self.coordinate_system,
             modalities=[Modality.ECEPHYS],
             components=[*assemblies.values(), *stations, computer],
             connections=[Connection(source_device=station.name, target_device=computer.name) for station in stations],
