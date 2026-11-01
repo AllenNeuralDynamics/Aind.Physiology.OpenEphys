@@ -110,26 +110,24 @@ def _stream_probe_names(processor: ET.Element) -> dict[ET.Element, str]:
 
 
 class AindInstrumentDataMapper(ads.AindDataSchemaRigDataMapper):
-    """Build ephys hardware metadata from a saved Open Ephys dataset.
+    """Map the hardware configuration of a saved Open Ephys dataset to an Instrument.
 
-    Read the first settings.xml in sorted ``Record Node XXX`` directories
-    under ``data_dir``, never the live GUI configuration. Probe-to-manipulator
-    associations come from the supplied Acquisition's EphysAssemblyConfig
-    objects, matched to names derived from ordered XML STREAM groups. Each
-    physical probe consumes four streams for Quad Base, one for NP2 single-
-    or multishank, and two for other supported models. AP/LFP and numbered
-    shank suffixes are removed; custom_probe_name is not used.
-    Manufacturer is explicitly unknown;
-    acquisition configurations do not describe manipulator hardware details.
-    Instrument identity, modification date, and coordinate system are optional
-    caller inputs, not inferred from the computer or XML save date. The identity
-    defaults to the name of the rig saved in ``<data_dir>/Logs``, the modification
-    date to today, and the coordinate system to bregma (anterior-right-inferior).
-    Without an ``acquisition``, one is mapped from ``data_dir``.
+    Reads the first ``settings.xml`` found in the sorted ``Record Node XXX`` directories of
+    ``data_dir``, never the live GUI. Probe-to-manipulator associations come from the
+    Acquisition's EphysAssemblyConfig objects, matched by probe name. Probe names are derived
+    from the ordered XML STREAM groups, with AP/LFP and shank suffixes removed.
 
-    All configured probes are included, even when disabled for acquisition.
-    Repeated shank entries are deduplicated by physical probe serial number.
-    Mapping only reads configuration; it never controls recording or writes files.
+    All configured probes are included, even when disabled for acquisition. Repeated shank
+    entries are deduplicated by probe serial number. Manipulator manufacturer is unknown.
+
+    Args:
+        data_dir: Open Ephys dataset root (the ``ecephys`` directory).
+        instrument_id: Defaults to the name of the rig saved in ``<data_dir>/Logs``.
+        modification_date: Defaults to today.
+        coordinate_system: Defaults to bregma (anterior-right-inferior).
+        acquisition: Defaults to the acquisition mapped from ``data_dir``.
+        location: Location of the instrument.
+        session_name: Defaults to the name of the session saved in ``<data_dir>/Logs``, if any.
     """
 
     def __init__(

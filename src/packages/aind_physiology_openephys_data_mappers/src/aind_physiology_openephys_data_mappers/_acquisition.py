@@ -17,26 +17,19 @@ logger = logging.getLogger(__name__)
 
 
 class AindAcquisitionDataMapper(ads.AindDataSchemaSessionDataMapper):
-    """Read completed metadata from a saved Open Ephys dataset.
+    """Map the recording history of a saved Open Ephys dataset to an Acquisition.
 
-    ``data_dir`` must contain one ``Ephys Metadata Generator XXX`` directory.
-    Mapping reads one DataStream object per JSON file in that directory, in
-    filename order. It never contacts the GUI or modifies the dataset.
-    Write the returned Acquisition explicitly with ``write_standard_file``.
-    Subject details are left unset for the behavior acquisition to provide
-    when the acquisitions are merged.
+    Reads one DataStream per JSON file in the dataset's ``Ephys Metadata Generator XXX``
+    directory. Never contacts the GUI or modifies the dataset.
 
     Args:
-        data_dir: Saved Open Ephys dataset root, not a processor subdirectory.
-        session: Shared experimental session (subject, experimenters, and name).
-            Defaults to the session saved in ``<data_dir>/Logs`` by the acquisition.
-        instrument_id: Identifier of the recording instrument. Defaults to the name of the rig
-            saved in ``<data_dir>/Logs``.
-        acquisition_type: Description of the experiment/acquisition. Defaults to
-            an empty string so merging can use the behavior acquisition's type.
-        ethics_review_id: Applicable ethics review identifiers, if available.
-        coordinate_system: Acquisition-level coordinate system, if known.
-        stimulus_epochs: Optional stimulus metadata supplied by the experiment.
+        data_dir: Open Ephys dataset root (the ``ecephys`` directory).
+        session: Session of the recording. Defaults to the one saved in ``<data_dir>/Logs``.
+        instrument_id: Defaults to the name of the rig saved in ``<data_dir>/Logs``.
+        acquisition_type: Description of the acquisition.
+        ethics_review_id: Applicable ethics review identifiers.
+        coordinate_system: Acquisition-level coordinate system.
+        stimulus_epochs: Stimulus metadata.
     """
 
     def __init__(
