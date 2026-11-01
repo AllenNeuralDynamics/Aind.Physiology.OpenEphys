@@ -18,7 +18,7 @@ This repository follows the project structure laid out in the [Aind.Behavior.Ser
 | --- | --- |
 | `.open-ephys/` | Scripts to download and launch the Open Ephys GUI |
 | `src/example.xml` | Example Open Ephys signal chain |
-| `src/packages/aind_physiology_openephys` | Publishable package: rig schema and session directory layout |
+| `src/packages/aind_physiology_openephys` | Publishable package: rig schema and the clabe app that records a session |
 | `src/packages/aind_physiology_openephys_data_mappers` | Internal data mappers, not published |
 
 ---
@@ -52,7 +52,6 @@ Data mapping is provided by the internal `aind-physiology-openephys-data-mappers
 uv run open-ephys-data-mapper --data-path <path-to-session-dir>
 ```
 
-This reads the saved rig and session and writes `ecephys_acquisition.json` and `ecephys_instrument.json` to the session directory. The instrument ID defaults to the rig name and can be overridden with `--instrument-id`.
 
 The mappers can also be used from Python. Only `data_dir` is required; everything else is read from `ecephys/Logs` or defaulted:
 

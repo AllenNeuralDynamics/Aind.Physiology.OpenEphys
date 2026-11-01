@@ -3,12 +3,13 @@
 import logging
 from datetime import date
 from pathlib import Path
+from typing import Self
 from xml.etree import ElementTree as ET
 
 from aind_data_schema.base import GenericModel
 from aind_data_schema.components.configs import EphysAssemblyConfig
 from aind_data_schema.components.connections import Connection
-from aind_data_schema.components.coordinates import CoordinateSystem
+from aind_data_schema.components.coordinates import CoordinateSystem, CoordinateSystemLibrary
 from aind_data_schema.components.devices import (
     Computer,
     EphysAssembly,
@@ -22,8 +23,10 @@ from aind_data_schema.core.instrument import Instrument
 from aind_data_schema_models.devices import ProbeModel
 from aind_data_schema_models.modalities import Modality
 from aind_data_schema_models.organizations import Organization
+from aind_physiology_openephys.app import AindBehaviorServicesOpenEphysApp
+from clabe.data_mapper import aind_data_schema as ads
 
-from ._base import DataMapper
+from ._acquisition import AindAcquisitionDataMapper
 from ._dataset import find_settings_xml
 
 logger = logging.getLogger(__name__)
@@ -106,7 +109,7 @@ def _stream_probe_names(processor: ET.Element) -> dict[ET.Element, str]:
     return names
 
 
-class AindInstrumentDataMapper(DataMapper[Instrument]):
+class AindInstrumentDataMapper(ads.AindDataSchemaRigDataMapper):
     """Build ephys hardware metadata from a saved Open Ephys dataset.
 
     Read the first settings.xml in sorted ``Record Node XXX`` directories
@@ -118,8 +121,11 @@ class AindInstrumentDataMapper(DataMapper[Instrument]):
     shank suffixes are removed; custom_probe_name is not used.
     Manufacturer is explicitly unknown;
     acquisition configurations do not describe manipulator hardware details.
-    Instrument identity, modification date, and coordinate system are explicit
-    caller inputs, not inferred from the computer or XML save date.
+    Instrument identity, modification date, and coordinate system are optional
+    caller inputs, not inferred from the computer or XML save date. The identity
+    defaults to the name of the rig saved in ``<data_dir>/Logs``, the modification
+    date to today, and the coordinate system to bregma (anterior-right-inferior).
+    Without an ``acquisition``, one is mapped from ``data_dir``.
 
     All configured probes are included, even when disabled for acquisition.
     Repeated shank entries are deduplicated by physical probe serial number.
@@ -130,21 +136,46 @@ class AindInstrumentDataMapper(DataMapper[Instrument]):
         self,
         data_dir: str | Path,
         *,
-        instrument_id: str,
-        modification_date: date,
-        coordinate_system: CoordinateSystem,
-        acquisition: Acquisition,
+        instrument_id: str | None = None,
+        modification_date: date | None = None,
+        coordinate_system: CoordinateSystem | None = None,
+        acquisition: Acquisition | None = None,
         location: str | None = None,
         session_name: str | None = None,
     ) -> None:
         self.data_dir = Path(data_dir)
+        if instrument_id is None:
+            instrument_id = AindBehaviorServicesOpenEphysApp.read_rig(self.data_dir).rig_name
         self.instrument_id = instrument_id
-        self.modification_date = modification_date
-        self.coordinate_system = coordinate_system
-        self.acquisition = acquisition
+        self.modification_date = modification_date if modification_date is not None else date.today()
+        self.coordinate_system = (
+            coordinate_system if coordinate_system is not None else CoordinateSystemLibrary.BREGMA_ARI
+        )
+        self.acquisition = (
+            acquisition
+            if acquisition is not None
+            else AindAcquisitionDataMapper(self.data_dir, instrument_id=instrument_id).map()
+        )
         self.location = location
+        if (
+            session_name is None
+            and (
+                self.data_dir / AindBehaviorServicesOpenEphysApp.LOGS / AindBehaviorServicesOpenEphysApp.SESSION_INPUT
+            ).is_file()
+        ):
+            session_name = AindBehaviorServicesOpenEphysApp.read_session(self.data_dir).session_name
         self._session_name = session_name
         self._mapped: Instrument | None = None
+
+    @classmethod
+    def from_app(cls, app: AindBehaviorServicesOpenEphysApp, acquisition: Acquisition | None = None) -> Self:
+        """Maps the configuration of an app's recording, read through the path this machine reaches it by."""
+        return cls(
+            app.recording_directory,
+            instrument_id=app.rig.rig_name,
+            acquisition=acquisition,
+            session_name=app.session.session_name,
+        )
 
     @property
     def session_name(self) -> str:

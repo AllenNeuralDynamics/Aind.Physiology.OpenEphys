@@ -166,12 +166,6 @@ def test_subject_details_input_is_rejected(metadata_dir, options):
         )
 
 
-def test_instrument_id_is_required_at_construction(metadata_dir, options):
-    options.pop("instrument_id")
-    with pytest.raises(TypeError, match="instrument_id"):
-        AindAcquisitionDataMapper(metadata_dir.parent, **options)
-
-
 def test_instrument_id_can_be_supplied_positionally(metadata_dir, options):
     session = options.pop("session")
     instrument_id = options.pop("instrument_id")
@@ -187,11 +181,14 @@ def test_instrument_id_can_be_supplied_positionally(metadata_dir, options):
     assert result.acquisition_type == ""
 
 
-@pytest.mark.parametrize("instrument_id", [None, ""])
-def test_missing_instrument_id_is_rejected_during_mapping(
-    metadata_dir, options, instrument_id
-):
-    options["instrument_id"] = instrument_id
+def test_instrument_id_defaults_to_the_saved_rig(metadata_dir, options):
+    options.pop("instrument_id")
+    with pytest.raises(FileNotFoundError, match="rig_input.json"):
+        AindAcquisitionDataMapper(metadata_dir.parent, **options)
+
+
+def test_empty_instrument_id_is_rejected_during_mapping(metadata_dir, options):
+    options["instrument_id"] = ""
     mapper = AindAcquisitionDataMapper(metadata_dir.parent, **options)
     with pytest.raises(ValidationError, match="instrument_id is required"):
         mapper.map()

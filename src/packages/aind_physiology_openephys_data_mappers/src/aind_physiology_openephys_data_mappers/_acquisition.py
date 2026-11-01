@@ -3,19 +3,20 @@
 import json
 import logging
 from pathlib import Path
-from typing import Any
+from typing import Any, Self
 
 from aind_behavior_services.session import Session
 from aind_data_schema.components.coordinates import CoordinateSystem
 from aind_data_schema.core import acquisition
+from aind_physiology_openephys.app import AindBehaviorServicesOpenEphysApp
+from clabe.data_mapper import aind_data_schema as ads
 
-from ._base import DataMapper
 from ._dataset import find_metadata_directory
 
 logger = logging.getLogger(__name__)
 
 
-class AindAcquisitionDataMapper(DataMapper[acquisition.Acquisition]):
+class AindAcquisitionDataMapper(ads.AindDataSchemaSessionDataMapper):
     """Read completed metadata from a saved Open Ephys dataset.
 
     ``data_dir`` must contain one ``Ephys Metadata Generator XXX`` directory.
@@ -28,8 +29,9 @@ class AindAcquisitionDataMapper(DataMapper[acquisition.Acquisition]):
     Args:
         data_dir: Saved Open Ephys dataset root, not a processor subdirectory.
         session: Shared experimental session (subject, experimenters, and name).
-        instrument_id: Required identifier of the recording instrument. The
-            orchestrator must supply the same ID for behavior and ephys metadata.
+            Defaults to the session saved in ``<data_dir>/Logs`` by the acquisition.
+        instrument_id: Identifier of the recording instrument. Defaults to the name of the rig
+            saved in ``<data_dir>/Logs``.
         acquisition_type: Description of the experiment/acquisition. Defaults to
             an empty string so merging can use the behavior acquisition's type.
         ethics_review_id: Applicable ethics review identifiers, if available.
@@ -40,8 +42,8 @@ class AindAcquisitionDataMapper(DataMapper[acquisition.Acquisition]):
     def __init__(
         self,
         data_dir: str | Path,
-        session: Session,
-        instrument_id: str,
+        session: Session | None = None,
+        instrument_id: str | None = None,
         *,
         acquisition_type: str = "",
         ethics_review_id: list[str] | None = None,
@@ -49,13 +51,22 @@ class AindAcquisitionDataMapper(DataMapper[acquisition.Acquisition]):
         stimulus_epochs: list[acquisition.StimulusEpoch] | None = None,
     ) -> None:
         self.data_dir = Path(data_dir)
-        self.session_model = session
+        self.session_model = (
+            session if session is not None else AindBehaviorServicesOpenEphysApp.read_session(self.data_dir)
+        )
+        if instrument_id is None:
+            instrument_id = AindBehaviorServicesOpenEphysApp.read_rig(self.data_dir).rig_name
         self.instrument_id = instrument_id
         self.acquisition_type = acquisition_type
         self.ethics_review_id = ethics_review_id
         self.coordinate_system = coordinate_system
         self.stimulus_epochs = list(stimulus_epochs) if stimulus_epochs is not None else []
         self._mapped: acquisition.Acquisition | None = None
+
+    @classmethod
+    def from_app(cls, app: AindBehaviorServicesOpenEphysApp) -> Self:
+        """Maps the recording of an app, read through the path this machine reaches it by."""
+        return cls(app.recording_directory, app.session, app.rig.rig_name)
 
     @property
     def session_name(self) -> str:
