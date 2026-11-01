@@ -3,13 +3,17 @@
 import logging
 import os
 from pathlib import Path, PureWindowsPath
+from typing import TYPE_CHECKING
 
 from aind_behavior_services.session import Session
-from clabe.apps.open_ephys import OpenEphysApp, OpenEphysAppSettings, Status, _OpenEphysGuiClient
+from clabe.apps.open_ephys import OpenEphysApp, OpenEphysAppSettings, Status
 from clabe.utils import is_this_computer
 from clabe.xml_rpc import RemoteRepository
 
 from .rig import AindPhysioOpenEphysRig
+
+if TYPE_CHECKING:
+    from clabe.apps.open_ephys import _OpenEphysGuiClient
 
 logger = logging.getLogger(__name__)
 
@@ -120,7 +124,7 @@ class AindBehaviorServicesOpenEphysApp(OpenEphysApp):
         *,
         timeout: float = 180.0,
         poll_interval: float = 0.5,
-    ) -> _OpenEphysGuiClient:
+    ) -> "_OpenEphysGuiClient":
         """Creates the session directory, starts the GUI, and points it at :attr:`gui_recording_directory`.
 
         Without an ``executor``, the GUI runs on the computer the rig names: here if ``rig.computer_name`` is this

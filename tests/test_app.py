@@ -15,7 +15,7 @@ from aind_physiology_openephys_data_mappers import (
     AindInstrumentDataMapper,
     DataMapperCli,
 )
-from clabe.apps.open_ephys import OpenEphysApp, Status, _OpenEphysGuiClient
+from clabe.apps.open_ephys import OpenEphysApp, Status
 from clabe.utils import get_computer_name
 from clabe.xml_rpc import RemoteRepository
 
@@ -57,7 +57,7 @@ def _app(tmp_path: Path) -> AindBehaviorServicesOpenEphysApp:
     app = AindBehaviorServicesOpenEphysApp(
         _rig(tmp_path / "data"), _session(), skip_validation=True
     )
-    app._client = Mock(spec=_OpenEphysGuiClient)
+    app._client = Mock()
     return app
 
 
