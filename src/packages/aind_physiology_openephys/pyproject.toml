@@ -5,7 +5,10 @@ build-backend = "uv_build"
 [project]
 name = "aind-physiology-openephys"
 description = "A library for the AIND Open Ephys physiology rig."
-authors = [{name = "Bruno Cruz", email = "bruno.cruz@alleninstitute.org"}]
+authors = [
+    {name = "Bruno Cruz", email = "bruno.cruz@alleninstitute.org"},
+    {name = "Josh Siegle", email = "joshs@alleninstitute.org"},
+]
 license = "MIT"
 requires-python = ">=3.11"
 classifiers = [

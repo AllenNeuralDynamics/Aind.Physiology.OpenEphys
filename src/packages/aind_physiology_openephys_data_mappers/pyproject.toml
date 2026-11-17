@@ -5,7 +5,10 @@ build-backend = "uv_build"
 [project]
 name = "aind-physiology-openephys-data-mappers"
 description = "Internal data mappers for the AIND Open Ephys physiology rig."
-authors = [{name = "Bruno Cruz", email = "bruno.cruz@alleninstitute.org"}]
+authors = [
+    {name = "Bruno Cruz", email = "bruno.cruz@alleninstitute.org"},
+    {name = "Josh Siegle", email = "joshs@alleninstitute.org"},
+]
 license = "MIT"
 version = "0.1.0"
 requires-python = ">=3.11"
@@ -21,8 +24,8 @@ readme = {file = "README.md", content-type = "text/markdown"}
 dependencies = [
     "aind-behavior-services>=0.13.9",
     "aind-physiology-openephys",
-    "aind-clabe>=0.15.1",
-    "aind-data-schema>=2.7.1",
+    "aind-clabe>=0.15.2",
+    "aind-data-schema>=2.9.2",
     "aind-data-schema-models",
     "pydantic",
     "pydantic-settings",
